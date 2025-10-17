@@ -48,6 +48,7 @@ const WatchmanDepartment = () => {
     const [pendingPickups, setPendingPickups] = useState([]);
     const [allGatePasses, setAllGatePasses] = useState([]);
     const [watchmanSummary, setWatchmanSummary] = useState({});
+    const [companyVehicleReturns, setCompanyVehicleReturns] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedGatePass, setSelectedGatePass] = useState(null);
     const [showVerifyDialog, setShowVerifyDialog] = useState(false);
@@ -55,7 +56,8 @@ const WatchmanDepartment = () => {
 
     const [allPassesSearchTerm, setAllPassesSearchTerm] = useState('');
     const [notificationCounts, setNotificationCounts] = useState({
-        pendingPickups: 0
+        pendingPickups: 0,
+        companyVehicleReturns: 0
     });
     const { toast } = useToast();
 
@@ -103,9 +105,10 @@ const WatchmanDepartment = () => {
     // Update notification counts when pendingPickups changes
     useEffect(() => {
         setNotificationCounts({
-            pendingPickups: pendingPickups.length
+            pendingPickups: pendingPickups.length,
+            companyVehicleReturns: companyVehicleReturns.length
         });
-    }, [pendingPickups]);
+    }, [pendingPickups, companyVehicleReturns]);
 
     const fetchData = async () => {
         try {
@@ -129,6 +132,18 @@ const WatchmanDepartment = () => {
             if (summaryRes.ok) {
                 const summary = await summaryRes.json();
                 setWatchmanSummary(summary);
+            }
+
+            
+            // Fetch company vehicle returns
+            try {
+                const returnsRes = await fetch(`${API_BASE}/watchman/company-vehicle-returns`);
+                if (returnsRes.ok) {
+                    const returns = await returnsRes.json();
+                    setCompanyVehicleReturns(returns || []);
+                }
+            } catch (e) {
+                console.warn('Failed to fetch company vehicle returns', e);
             }
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -588,7 +603,7 @@ const WatchmanDepartment = () => {
             {/* Main Content */}
             <div className="px-6 py-6">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-                    <TabsList className="flex md:grid md:grid-cols-5 w-full overflow-x-auto overflow-y-hidden md:overflow-x-hidden whitespace-nowrap bg-gray-100 border border-gray-300 pl-4 md:pl-0">
+                    <TabsList className="flex md:grid md:grid-cols-6 w-full overflow-x-auto overflow-y-hidden md:overflow-x-hidden whitespace-nowrap bg-gray-100 border border-gray-300 pl-4 md:pl-0">
                         
                         <TabsTrigger value="dashboard" className="text-gray-800">Dashboard</TabsTrigger>
                         
@@ -608,6 +623,14 @@ const WatchmanDepartment = () => {
                         <TabsTrigger value="gate-entry" className="text-gray-800">Gate Entry</TabsTrigger>
                         
                         <TabsTrigger value="guest-list" className="text-gray-800">Guest List</TabsTrigger>
+                        <TabsTrigger value="company-vehicle-returns" className="text-gray-800 relative">
+                            Companys Vehicle Return
+                            {notificationCounts.companyVehicleReturns > 0 && (
+                                <div className="absolute -top-2 -right-2 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold min-w-[1.25rem] h-5 px-1">
+                                    {notificationCounts.companyVehicleReturns}
+                                </div>
+                            )}
+                        </TabsTrigger>
                         
                     </TabsList>
                     <TabsContent value="dashboard" className="space-y-4">
@@ -912,7 +935,90 @@ const WatchmanDepartment = () => {
                     <TabsContent value="gate-entry" className="space-y-4">
                         <GateEntryTab />
                     </TabsContent>
+                    <TabsContent value="company-vehicle-returns" className="space-y-4">
+                        <Card className="bg-white border border-gray-300 shadow-sm">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-gray-800">Companys Vehicle Return</CardTitle>
+                                <CardDescription className="text-gray-600">Vehicles returning to site sent by Transport Department</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex justify-end mb-4">
+                                    <Button onClick={async () => {
+                                        // refresh
+                                        try {
+                                            const res = await fetch(`${API_BASE}/watchman/company-vehicle-returns`);
+                                            if (!res.ok) throw new Error('Failed to fetch');
+                                            const data = await res.json();
+                                            setCompanyVehicleReturns(data || []);
+                                        } catch (e) {
+                                            toast({ title: 'Error', description: 'Failed to load returns', variant: 'destructive' });
+                                        }
+                                    }} className="bg-gray-100">Refresh</Button>
+                                </div>
 
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="text-black">Vehicle</TableHead>
+                                                <TableHead className="text-black">Driver</TableHead>
+                                                <TableHead className="text-black">Contact</TableHead>
+                                                <TableHead className="text-black">Status</TableHead>
+                                                <TableHead className="text-black">Reported At</TableHead>
+                                                <TableHead className="text-black">Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {companyVehicleReturns.length === 0 ? (
+                                                <TableRow>
+                                                    <TableCell colSpan={6} className="text-center py-8 text-gray-600">No company vehicle returns</TableCell>
+                                                </TableRow>
+                                            ) : (
+                                                companyVehicleReturns.map((item) => (
+                                                    <TableRow key={item.id || item.vehicleId || item.data?.vehicleId}>
+                                                        <TableCell className="font-medium text-gray-800">{item.data?.vehicleNumber || item.vehicleNumber}</TableCell>
+                                                        <TableCell className="text-gray-800">{item.data?.driverName || item.driverName}</TableCell>
+                                                        <TableCell className="text-gray-800">{item.data?.driverContact || item.driverContact || '-'}</TableCell>
+                                                        <TableCell className="text-gray-800">{item.data?.status || item.status || 'returning'}</TableCell>
+                                                        <TableCell className="text-gray-800">{new Date(item.timestamp).toLocaleString()}</TableCell>
+                                                        <TableCell>
+                                                            <div className="flex gap-2">
+                                                                <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={async () => {
+                                                                    try {
+                                                                        const vehicleId = item.data?.vehicleId || item.vehicleId || item.id;
+                                                                        const res = await fetch(`${API_BASE}/watchman/company-vehicle-returns/${vehicleId}/check-in`, { method: 'POST' });
+                                                                        const resp = await res.json().catch(() => ({}));
+                                                                        if (res.ok) {
+                                                                            toast({ title: 'Checked In', description: 'Vehicle checked in and marked available' });
+                                                                            // refresh lists
+                                                                            fetchData();
+                                                                            // also refresh transport vehicles tab by calling fleet endpoint
+                                                                            try {
+                                                                                const vehicleEvent = new CustomEvent('vehicle-checked-in', { detail: { vehicleId } });
+                                                                                window.dispatchEvent(vehicleEvent);
+                                                                            } catch (e) {
+                                                                                // ignore
+                                                                            }
+                                                                        } else {
+                                                                            toast({ title: 'Error', description: resp.error || 'Failed to check in', variant: 'destructive' });
+                                                                        }
+                                                                    } catch (e) {
+                                                                        console.error(e);
+                                                                        toast({ title: 'Error', description: 'Failed to check in vehicle', variant: 'destructive' });
+                                                                    }
+                                                                }}>Check In</Button>
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                    
                     {/* Guest List Tab */}
                     <TabsContent value="guest-list" className="space-y-4">
                         <Card className="bg-white border border-gray-300 shadow-sm">
