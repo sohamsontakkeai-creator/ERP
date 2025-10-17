@@ -46,6 +46,9 @@ def create_app(config_name=None):
     # Register blueprints
     register_blueprints(app)
 
+    if not app.config.get("TESTING", False):
+        initialize_database(app) 
+
     return app
 
 def initialize_database(app):
