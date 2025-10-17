@@ -971,6 +971,7 @@ const TransportDepartment = () => {
     try {
       console.log('🟢 Add Vehicle clicked', newVehicle);
       // Basic client-side validation
+		 console.log("🌐 Using API base URL:", import.meta.env.VITE_API_URL);
       if (!newVehicle.license_plate.trim() || !newVehicle.vehicle_type.trim() || !newVehicle.driver_name.trim()) {
         toast({
           title: "Validation Error",
