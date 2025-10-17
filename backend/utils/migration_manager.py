@@ -230,7 +230,7 @@ class MigrationManager:
             name VARCHAR(100) , 
             pay_period_start DATE NOT NULL,
             pay_period_end DATE NOT NULL,
-            basic_salary FLOAT NOT NULL,
+            monthly_salary FLOAT NOT NULL,
             allowances FLOAT DEFAULT 0,
             deductions FLOAT DEFAULT 0,
             gross_salary FLOAT NOT NULL,
