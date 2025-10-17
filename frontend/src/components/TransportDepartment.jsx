@@ -57,6 +57,10 @@ const TransportDepartment = () => {
   const { toast } = useToast();
   const [dashboardStats, setDashboardStats] = useState({});
   const [vehicles, setVehicles] = useState([]);
+  // Track which vehicles have been intimated to watchman (ids)
+  const [intimatedVehicles, setIntimatedVehicles] = useState([]);
+  // Track vehicles currently sending intimation to avoid duplicate clicks
+  const [sendingIntimation, setSendingIntimation] = useState({});
   const [availableVehicles, setAvailableVehicles] = useState([]);
   const [deliveries, setDeliveries] = useState([]);
   const [activeTransportOrders, setActiveTransportOrders] = useState([]);
@@ -158,6 +162,17 @@ const TransportDepartment = () => {
     fetchPartLoadOrders(); // NEW: Fetch part load orders
     fetchCompletedPartLoads(); // NEW: Fetch completed part load orders
     fetchPendingApprovals(); // NEW: Fetch pending approvals
+  }, []);
+
+	
+  // Listen for vehicle-checked-in events (dispatched by Watchman after check-in) to refresh fleet
+  useEffect(() => {
+    const handler = (e) => {
+      console.log('Vehicle checked in event received', e?.detail);
+      fetchVehicles();
+    };
+    window.addEventListener('vehicle-checked-in', handler);
+    return () => window.removeEventListener('vehicle-checked-in', handler);
   }, []);
 
   // Optional: Auto-refresh data every 30 seconds to keep fleet status updated
@@ -2405,6 +2420,7 @@ const TransportDepartment = () => {
                                   Edit
                                 </Button>
                                 {v.status === 'returning' && (
+								<>
                                   <Button 
                                     size="sm" 
                                     variant="outline"
@@ -2421,6 +2437,38 @@ const TransportDepartment = () => {
                                   >
                                     Mark Reached
                                   </Button>
+
+                                  <Button
+                                    size="sm"
+                                    className="ml-2"
+                                    onClick={async () => {
+									if (intimatedVehicles.includes(v.id) || sendingIntimation[v.id]) return;
+                                      try {
+										setSendingIntimation(prev => ({ ...prev, [v.id]: true }));
+                                        const res = await fetch(`${API_BASE}/fleet/${v.id}/intimate-watchman`, {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ note: `Vehicle ${v.vehicleNumber} returning` })
+                                        });
+                                        const resp = await res.json().catch(() => ({}));
+                                        if (res.ok) {
+                                          toast({ title: 'Notified', description: 'Watchman has been intimated' });
+										  setIntimatedVehicles(prev => [...prev, v.id]);	
+                                        } else {
+                                          toast({ title: 'Failed to notify', description: resp.error || 'Try again', variant: 'destructive' });
+                                        }
+                                      } catch (err) {
+                                        console.error('Error intimating watchman', err);
+                                        toast({ title: 'Error', description: 'Failed to notify watchman', variant: 'destructive' });
+                                      } finally {
+                                        setSendingIntimation(prev => ({ ...prev, [v.id]: false }));
+									  }
+                                    }}
+									disabled={intimatedVehicles.includes(v.id) || !!sendingIntimation[v.id]}
+                                  >
+                                    {sendingIntimation[v.id] ? 'Sending...' : intimatedVehicles.includes(v.id) ? 'Intimation Sent' : 'Send Intimation'}
+                                  </Button>
+                                  </>
                                 )}
                                 <Dialog
                                   open={editDialog.open && editDialog.vehicle?.id === v.id}
