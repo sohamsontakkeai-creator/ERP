@@ -2639,16 +2639,6 @@ const DashboardView = ({ employees = [] }) => {  // ✅ Accept employees as prop
                     />
                   </div>
                   <div>
-                    <Label htmlFor="salary">Salary</Label>
-                    <Input
-                      id="salary"
-                      type="number"
-                      value={modalFormData.salary || ''}
-                      className="bg-white text-gray-900 border-gray-300"
-                      onChange={(e) => setModalFormData({...modalFormData, salary: e.target.value})}
-                    />
-                  </div>
-                  <div>
                     <Label htmlFor="salaryType">Salary Type</Label>
                     <Select value={modalFormData.salaryType || 'monthly'} onValueChange={(value) => setModalFormData({...modalFormData, salaryType: value})}>
                       <SelectTrigger className="bg-white text-gray-900 border-gray-300">
@@ -2660,6 +2650,16 @@ const DashboardView = ({ employees = [] }) => {  // ✅ Accept employees as prop
                         <SelectItem value="hourly">Hourly</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="salary">Salary</Label>
+                    <Input
+                      id="salary"
+                      type="number"
+                      value={modalFormData.salary || ''}
+                      className="bg-white text-gray-900 border-gray-300"
+                      onChange={(e) => setModalFormData({...modalFormData, salary: e.target.value})}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="status">Status</Label>
