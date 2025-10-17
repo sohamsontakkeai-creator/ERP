@@ -138,10 +138,12 @@ def initialize_database(app):
             print(f"❌ Error setting up database: {e}")
             raise
 
- initialize_database(app)
 if __name__ == '__main__':
     # Create the Flask application
     app = create_app()
+
+    #intialize database 
+    initialize_database(app)
     
     # Run the application
     app.run(
