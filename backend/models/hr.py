@@ -77,7 +77,7 @@ class Employee(db.Model):
     designation = db.Column(db.String(100), nullable=False)
     joining_date = db.Column(db.Date, nullable=False)
     salary = db.Column(db.Float, nullable=False)
-    salary_type = db.Column(db.Enum('DAILY', 'MONTHLY', 'HOURLY'), default='MONTHLY')
+    salary_type = db.Column(db.Enum('daily', 'monthly', 'hourly'), default='monthly')
     status = db.Column(db.String(20), default='active')  # active, inactive, terminated
     manager_id = db.Column(db.Integer, db.ForeignKey('employees.id'))
 
