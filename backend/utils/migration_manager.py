@@ -176,6 +176,7 @@ class MigrationManager:
             department VARCHAR(100) NOT NULL,
             designation VARCHAR(100) NOT NULL,
             joining_date DATE NOT NULL,
+            salary_type ENUM('daily','monthly','hourly') DEFAULT 'daily',
             salary FLOAT NOT NULL,
             status VARCHAR(20) DEFAULT 'active',
             manager_id INT,
@@ -189,10 +190,11 @@ class MigrationManager:
         CREATE TABLE IF NOT EXISTS attendance (
             id INT AUTO_INCREMENT PRIMARY KEY,
             employee_id INT NOT NULL,
+            name VARCHAR(100),
             date DATE NOT NULL,
             check_in_time TIME,
             check_out_time TIME,
-            status ENUM('present', 'absent', 'late', 'half_day') DEFAULT 'present',
+            status ENUM('PRESENT', 'ABSENT', 'LATE', 'HALF_DAY') DEFAULT 'ABSENT',
             hours_worked FLOAT,
             notes TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -205,6 +207,7 @@ class MigrationManager:
         CREATE TABLE IF NOT EXISTS leaves (
             id INT AUTO_INCREMENT PRIMARY KEY,
             employee_id INT NOT NULL,
+            name VARCHAR(100),
             leave_type ENUM('casual', 'sick', 'earned', 'maternity', 'paternity') NOT NULL,
             start_date DATE NOT NULL,
             end_date DATE NOT NULL,
@@ -224,6 +227,7 @@ class MigrationManager:
         CREATE TABLE IF NOT EXISTS payrolls (
             id INT AUTO_INCREMENT PRIMARY KEY,
             employee_id INT NOT NULL,
+            name VARCHAR(100) , 
             pay_period_start DATE NOT NULL,
             pay_period_end DATE NOT NULL,
             basic_salary FLOAT NOT NULL,
@@ -239,26 +243,6 @@ class MigrationManager:
         );
         """
 
-        create_performance_reviews_table = """
-        CREATE TABLE IF NOT EXISTS performance_reviews (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            employee_id INT NOT NULL,
-            review_period VARCHAR(20) NOT NULL,
-            review_date DATE NOT NULL,
-            reviewer_id INT NOT NULL,
-            overall_rating ENUM('excellent', 'good', 'average', 'needs_improvement') NOT NULL,
-            goals_achievement FLOAT,
-            strengths TEXT,
-            areas_for_improvement TEXT,
-            development_plan TEXT,
-            comments TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            FOREIGN KEY (employee_id) REFERENCES employees(id),
-            FOREIGN KEY (reviewer_id) REFERENCES employees(id)
-        );
-        """
-
         create_job_postings_table = """
         CREATE TABLE IF NOT EXISTS job_postings (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -271,7 +255,7 @@ class MigrationManager:
             description TEXT NOT NULL,
             requirements TEXT,
             responsibilities TEXT,
-            status ENUM('open', 'closed', 'filled') DEFAULT 'open',
+            status ENUM('OPEN', 'CLOSED', 'FILLED') DEFAULT 'OPEN',
             posted_by INT,
             application_deadline DATE,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
