@@ -288,6 +288,22 @@ def mark_driver_reached(vehicle_id):
         return jsonify({'error': str(e)}), 500
 
 
+# New: Send intimation to watchman that a company vehicle is returning
+@transport_bp.route('/fleet/<int:vehicle_id>/intimate-watchman', methods=['POST'])
+def intimate_watchman(vehicle_id):
+    """Send intimation to watchman that a company vehicle is returning to site"""
+    try:
+        data = request.get_json() or {}
+        # optional fields from transport frontend
+        note = data.get('note')
+        result = TransportService.intimate_watchman_vehicle_return(vehicle_id, note)
+        return jsonify(result), 200
+    except ValueError as ve:
+        return jsonify({'error': str(ve)}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @transport_bp.route('/transport/active-orders', methods=['GET'])
 def get_active_transport_orders():
     """Get active transport orders (not delivered) for dashboard"""
