@@ -212,9 +212,12 @@ def get_fleet_vehicles():
         return jsonify({'error': str(e)}), 500
 
 
-@transport_bp.route('/fleet/add', methods=['POST'])
+@transport_bp.route('/fleet/add', methods=['POST','OPTIONS'])
 def add_fleet_vehicle():
     """Add a new vehicle to the fleet"""
+    if request.method == 'OPTIONS':
+        return '', 200  # CORS preflight response
+        
     try:
         data = request.get_json()
         
