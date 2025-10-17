@@ -1472,3 +1472,42 @@ class TransportService:
         except Exception as e:
             db.session.rollback()
             raise Exception(f"Error marking driver reached: {str(e)}")
+
+    
+    @staticmethod
+    def intimate_watchman_vehicle_return(vehicle_id: int, note: str = None):
+        """Create an intimation/notification for watchman that a company vehicle is returning"""
+        try:
+            vehicle = Vehicle.query.get(vehicle_id)
+            if not vehicle:
+                raise ValueError('Vehicle not found')
+
+            # Build notification payload
+            title = 'Company Vehicle Returning'
+            message = f'Vehicle {vehicle.vehicle_number} driven by {vehicle.driver_name or "N/A"} is returning.'
+            if note:
+                message = message + f' Note: {note}'
+
+            notif = NotificationService.create_notification(
+                notification_type='company_vehicle_return',
+                title=title,
+                message=message,
+                data={
+                    'vehicleId': vehicle.id,
+                    'vehicleNumber': vehicle.vehicle_number,
+                    'driverName': vehicle.driver_name,
+                    'driverContact': vehicle.driver_contact,
+                    'status': vehicle.status
+                },
+                department='watchman',
+                priority='high'
+            )
+
+            return {
+                'status': 'success',
+                'message': 'Watchman intimated about vehicle return',
+                'notification': notif
+            }
+        except Exception as e:
+            db.session.rollback()
+            raise Exception(f"Error intimating watchman: {str(e)}")
