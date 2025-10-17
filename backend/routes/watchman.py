@@ -233,3 +233,42 @@ def delete_guest(guest_id):
         return jsonify({'error': str(ve)}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+
+# New endpoints: company vehicle returns listing and check-in
+@watchman_bp.route('/watchman/company-vehicle-returns', methods=['GET'])
+def get_company_vehicle_returns():
+    """Return list of company vehicle return notifications for watchman"""
+    try:
+        # We reuse NotificationService in services.notification_service
+        from services.notification_service import NotificationService
+        notifs = NotificationService.get_notifications(department='watchman', unread_only=True, limit=50)
+        # Filter only company vehicle return type
+        returns = [n for n in notifs if n.get('type') == 'company_vehicle_return']
+        return jsonify(returns), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@watchman_bp.route('/watchman/company-vehicle-returns/<int:vehicle_id>/check-in', methods=['POST'])
+def checkin_company_vehicle(vehicle_id):
+    """Watchman checks in the returning company vehicle, set vehicle available."""
+    try:
+        from services.transport_service import TransportService
+        # Mark driver reached which will set vehicle available
+        result = TransportService.mark_driver_reached(vehicle_id)
+
+        # Also mark related notifications as read (best-effort)
+        from services.notification_service import NotificationService
+        # mark any matching notification read
+        for n in NotificationService._notifications:
+            data = n.get('data') or {}
+            if n.get('type') == 'company_vehicle_return' and int(data.get('vehicleId') or 0) == int(vehicle_id):
+                n['read'] = True
+
+        return jsonify(result), 200
+    except ValueError as ve:
+        return jsonify({'error': str(ve)}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
