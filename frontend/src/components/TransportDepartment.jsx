@@ -989,7 +989,7 @@ const TransportDepartment = () => {
         driverContact: newVehicle.driver_phone
       };
       
-      const response = await fetch('/api/fleet/add', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/fleet/add`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
