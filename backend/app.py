@@ -137,7 +137,8 @@ def initialize_database(app):
         except Exception as e:
             print(f"❌ Error setting up database: {e}")
             raise
-
+            
+initialize_database(app)
 if __name__ == '__main__':
     # Create the Flask application
     app = create_app()
