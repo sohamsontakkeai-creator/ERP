@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -93,6 +93,69 @@ const WatchmanDepartment = () => {
         note: ''
     });
 
+    // Camera capture states
+    const [cameraActive, setCameraActive] = useState(false);
+    const [videoStream, setVideoStream] = useState(null);
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
+    const sendInFileInputRef = useRef(null);
+    const releaseFileInputRef = useRef(null);
+    const [cameraFailed, setCameraFailed] = useState(false);
+    const [capturedSendInPhoto, setCapturedSendInPhoto] = useState(null);
+    const [capturedReleasePhoto, setCapturedReleasePhoto] = useState(null);
+    const [manualSendInFile, setManualSendInFile] = useState(null);
+    const [manualReleaseFile, setManualReleaseFile] = useState(null);
+
+    useEffect(() => {
+        const videoElement = videoRef.current;
+        if (!videoElement) return;
+
+        let retryTimeout;
+
+        const handleLoadedMetadata = () => {
+            if ((videoElement.videoWidth || 0) === 0) {
+                retryTimeout = window.setTimeout(() => {
+                    const currentVideo = videoRef.current;
+                    if (!currentVideo) return;
+                    if ((currentVideo.videoWidth || 0) === 0) {
+                        setCameraFailed(true);
+                    } else {
+                        setCameraFailed(false);
+                    }
+                }, 200);
+            } else {
+                setCameraFailed(false);
+            }
+        };
+
+        if (videoStream) {
+            videoElement.srcObject = videoStream;
+            videoElement.addEventListener('loadedmetadata', handleLoadedMetadata);
+            const playPromise = videoElement.play();
+            if (playPromise && typeof playPromise.then === 'function') {
+                playPromise.catch(() => {});
+            }
+        } else {
+            try { videoElement.pause(); } catch (e) {}
+            videoElement.srcObject = null;
+            setCameraFailed(false);
+        }
+
+        setCapturedSendInPhoto(null);
+        setCapturedReleasePhoto(null);
+
+        return () => {
+            if (retryTimeout) {
+                window.clearTimeout(retryTimeout);
+            }
+            videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            try { videoElement.pause(); } catch (e) {}
+            if (videoElement.srcObject) {
+                videoElement.srcObject = null;
+            }
+        };
+    }, [videoStream]);
+
     const [rejectionForm, setRejectionForm] = useState({
         rejectionReason: ''
     });
@@ -102,7 +165,7 @@ const WatchmanDepartment = () => {
         fetchGuests();
     }, []);
     
-    // Update notification counts when pendingPickups changes
+    // Update notification counts when relevant lists change
     useEffect(() => {
         setNotificationCounts({
             pendingPickups: pendingPickups.length,
@@ -134,7 +197,6 @@ const WatchmanDepartment = () => {
                 setWatchmanSummary(summary);
             }
 
-            
             // Fetch company vehicle returns
             try {
                 const returnsRes = await fetch(`${API_BASE}/watchman/company-vehicle-returns`);
@@ -185,18 +247,65 @@ const WatchmanDepartment = () => {
 
     const handleVerifyPickup = async (action) => {
         try {
-            const requestData = {
-                ...verificationForm,
-                action: action
-            };
+            let response;
 
-            const response = await fetch(`${API_BASE}/watchman/verify/${selectedGatePass.gatePassId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestData),
-            });
+            if ((action === 'send_in' && capturedSendInPhoto && capturedSendInPhoto !== 'manual') ||
+                (action === 'release' && capturedReleasePhoto && capturedReleasePhoto !== 'manual')) {
+                const photoDataUrl = action === 'send_in' ? capturedSendInPhoto : capturedReleasePhoto;
+                const blob = await (await fetch(photoDataUrl)).blob();
+
+                const formData = new FormData();
+                formData.append('action', action);
+                formData.append('customerName', verificationForm.customerName || '');
+                formData.append('vehicleNo', verificationForm.vehicleNo || '');
+                formData.append('driverName', verificationForm.driverName || '');
+                formData.append('note', verificationForm.note || '');
+
+                if (action === 'send_in') {
+                    formData.append('sendInPhoto', blob, `sendin_${selectedGatePass.gatePassId}.jpg`);
+                } else {
+                    formData.append('afterLoadingPhoto', blob, `afterload_${selectedGatePass.gatePassId}.jpg`);
+                }
+
+                response = await fetch(`${API_BASE}/watchman/verify/${selectedGatePass.gatePassId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+            } else if ((action === 'send_in' && capturedSendInPhoto === 'manual') ||
+                       (action === 'release' && capturedReleasePhoto === 'manual')) {
+                const formData = new FormData();
+                formData.append('action', action);
+                formData.append('customerName', verificationForm.customerName || '');
+                formData.append('vehicleNo', verificationForm.vehicleNo || '');
+                formData.append('driverName', verificationForm.driverName || '');
+                formData.append('note', verificationForm.note || '');
+
+                if (action === 'send_in' && manualSendInFile) {
+                    formData.append('sendInPhoto', manualSendInFile, manualSendInFile.name);
+                }
+
+                if (action === 'release' && manualReleaseFile) {
+                    formData.append('afterLoadingPhoto', manualReleaseFile, manualReleaseFile.name);
+                }
+
+                response = await fetch(`${API_BASE}/watchman/verify/${selectedGatePass.gatePassId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+            } else {
+                const requestData = {
+                    ...verificationForm,
+                    action: action
+                };
+
+                response = await fetch(`${API_BASE}/watchman/verify/${selectedGatePass.gatePassId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData),
+                });
+            }
 
             if (response.ok) {
                 const result = await response.json();
@@ -217,6 +326,10 @@ const WatchmanDepartment = () => {
                     driverName: '',
                     note: ''
                 });
+                setCapturedSendInPhoto(null);
+                setCapturedReleasePhoto(null);
+                setManualSendInFile(null);
+                setManualReleaseFile(null);
 
                 toast({
                     title: "Success",
@@ -237,6 +350,125 @@ const WatchmanDepartment = () => {
             toast({
                 title: "Error",
                 description: "Failed to verify pickup",
+                variant: "destructive"
+            });
+        }
+    };
+
+    const startCamera = async () => {
+        try {
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                setVideoStream(stream);
+                if (videoRef.current) {
+                    const v = videoRef.current;
+                    v.srcObject = stream;
+                    // Wait for metadata so dimensions are available
+                    await new Promise((resolve) => {
+                        const onLoaded = () => {
+                            v.removeEventListener('loadedmetadata', onLoaded);
+                            resolve();
+                        };
+                        v.addEventListener('loadedmetadata', onLoaded);
+                    });
+                    try { await v.play(); } catch (e) { /* ignore play error */ }
+
+                    // If width still zero, mark camera failed after a short retry
+                    if ((v.videoWidth || 0) === 0) {
+                        await new Promise(r => setTimeout(r, 150));
+                        if ((v.videoWidth || 0) === 0) {
+                            setCameraFailed(true);
+                            toast({ title: 'Camera failed', description: 'Could not initialize camera preview. Use the file upload fallback below.', variant: 'destructive' });
+                        } else {
+                            setCameraFailed(false);
+                        }
+                    } else {
+                        setCameraFailed(false);
+                    }
+                }
+                setCameraActive(true);
+            } else {
+                toast({ title: 'Camera not available', description: 'Your browser does not support camera access', variant: 'destructive' });
+            }
+        } catch (e) {
+            console.error('Could not start camera', e);
+            toast({ title: 'Camera error', description: 'Permission denied or no camera available', variant: 'destructive' });
+        }
+    };
+
+    const stopCamera = () => {
+        if (videoStream) {
+            videoStream.getTracks().forEach(t => t.stop());
+            setVideoStream(null);
+            if (videoRef.current) {
+                try { videoRef.current.pause(); } catch (e) {}
+                try { videoRef.current.srcObject = null; } catch (e) {}
+            }
+        }
+        setCameraActive(false);
+    };
+
+    // Capture a single photo from the active video feed (returns dataURL or null)
+    const capturePhoto = () => {
+        if (!videoRef.current || !canvasRef.current) return null;
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+
+        // HAVE_ENOUGH_DATA === 4
+        if (video.readyState !== 4) return null;
+
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        return photoDataUrl;
+    };
+
+    // Capture multiple photos over a short interval and return array of dataURLs
+    const captureMultiplePhotos = async (numPhotos = 5, intervalMs = 250) => {
+        const photos = [];
+        for (let i = 0; i < numPhotos; i++) {
+            const p = capturePhoto();
+            if (p) photos.push(p);
+            // wait between frames
+            // eslint-disable-next-line no-await-in-loop
+            await new Promise(res => setTimeout(res, intervalMs));
+        }
+        return photos;
+    };
+
+    const handleCameraCapture = async (action) => {
+        try {
+            const photoDataUrl = capturePhoto();
+            if (!photoDataUrl) {
+                toast({
+                    title: "Capture Failed",
+                    description: "Could not capture photo. Please try again.",
+                    variant: "destructive"
+                });
+                return;
+            }
+
+            // Save the captured photo based on action type
+            if (action === 'send_in') {
+                setCapturedSendInPhoto(photoDataUrl);
+            } else if (action === 'release') {
+                setCapturedReleasePhoto(photoDataUrl);
+            }
+
+            // Stop the camera immediately after capturing
+            stopCamera();
+
+            toast({
+                title: "Photo Captured",
+                description: "Review the photo below. Click 'Verify & " + (action === 'send_in' ? 'Send In' : 'Release') + "' to submit or take another photo.",
+            });
+        } catch (error) {
+            console.error('Error capturing photo:', error);
+            toast({
+                title: "Error",
+                description: "Failed to capture photo",
                 variant: "destructive"
             });
         }
@@ -598,7 +830,7 @@ const WatchmanDepartment = () => {
             {/* Order Status Bar */}
             <div className="max-w-7xl mx-auto px-6 py-4">
                 <OrderStatusBar className="mb-4" />
-            
+           
 
             {/* Main Content */}
             <div className="px-6 py-6">
@@ -621,8 +853,6 @@ const WatchmanDepartment = () => {
                         </TabsTrigger>
                         
                         <TabsTrigger value="gate-entry" className="text-gray-800">Gate Entry</TabsTrigger>
-                        
-                        <TabsTrigger value="guest-list" className="text-gray-800">Guest List</TabsTrigger>
                         <TabsTrigger value="company-vehicle-returns" className="text-gray-800 relative">
                             Companys Vehicle Return
                             {notificationCounts.companyVehicleReturns > 0 && (
@@ -631,6 +861,8 @@ const WatchmanDepartment = () => {
                                 </div>
                             )}
                         </TabsTrigger>
+                        
+                        <TabsTrigger value="guest-list" className="text-gray-800">Guest List</TabsTrigger>
                         
                     </TabsList>
                     <TabsContent value="dashboard" className="space-y-4">
@@ -935,6 +1167,7 @@ const WatchmanDepartment = () => {
                     <TabsContent value="gate-entry" className="space-y-4">
                         <GateEntryTab />
                     </TabsContent>
+
                     <TabsContent value="company-vehicle-returns" className="space-y-4">
                         <Card className="bg-white border border-gray-300 shadow-sm">
                             <CardHeader>
@@ -1018,7 +1251,7 @@ const WatchmanDepartment = () => {
                             </CardContent>
                         </Card>
                     </TabsContent>
-                    
+
                     {/* Guest List Tab */}
                     <TabsContent value="guest-list" className="space-y-4">
                         <Card className="bg-white border border-gray-300 shadow-sm">
@@ -1239,7 +1472,8 @@ const WatchmanDepartment = () => {
 
             {/* Verify Pickup Dialog */}
             <Dialog open={showVerifyDialog} onOpenChange={setShowVerifyDialog}>
-                <DialogContent className="max-w-md">
+                {/* Constrain dialog height and make content a vertical flex so footer stays visible */}
+                <DialogContent className="max-w-md max-h-[80vh] flex flex-col overflow-hidden">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <CheckCircle className="h-5 w-5 text-green-600" />
@@ -1252,7 +1486,8 @@ const WatchmanDepartment = () => {
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-4">
+                    {/* Make the form area scrollable if content overflows; keep it as flex-1 */}
+                    <div className="space-y-4 overflow-y-auto px-2 flex-1">
                         <div className="space-y-2">
                             <Label htmlFor="verifyCustomerName">Customer Name Verification</Label>
                             <Input
@@ -1298,6 +1533,161 @@ const WatchmanDepartment = () => {
                                 <div><strong>Expected Customer:</strong> {selectedGatePass.customerName}</div>
                                 <div><strong>Product:</strong> {selectedGatePass.productName}</div>
                                 <div><strong>Quantity:</strong> {selectedGatePass.quantity}</div>
+
+                                {/* Camera capture area: preview + controls */}
+                                <div className="mt-3">
+                                    {!cameraActive ? (
+                                        <Button variant="outline" onClick={startCamera} className="mb-2">Start Camera</Button>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            <video ref={videoRef} autoPlay playsInline muted className="w-full max-h-60 bg-black" style={{ objectFit: 'cover' }} />
+                                            <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+                                            {/* File input fallback when camera fails or user prefers upload */}
+                                            <div className="flex gap-2 flex-wrap">
+                                                {(selectedGatePass?.dispatchStatus === 'ready_for_pickup' || selectedGatePass?.dispatchStatus === 'ready_for_load') && (
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={() => handleCameraCapture('send_in')}
+                                                        disabled={!cameraActive || !selectedGatePass}
+                                                    >
+                                                        Capture Photo
+                                                    </Button>
+                                                )}
+                                                {selectedGatePass?.dispatchStatus === 'loaded' && (
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={() => handleCameraCapture('release')}
+                                                        disabled={!cameraActive || !selectedGatePass}
+                                                    >
+                                                        Capture Photo
+                                                    </Button>
+                                                )}
+                                                <Button variant="ghost" onClick={stopCamera}>Stop Camera</Button>
+                                            </div>
+
+                                            {cameraFailed && (
+                                                <div className="mt-2 space-y-2">
+                                                    <p className="text-sm text-red-400">Camera preview failed. You can attach a photo manually.</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {(selectedGatePass?.dispatchStatus === 'ready_for_pickup' || selectedGatePass?.dispatchStatus === 'ready_for_load') && (
+                                                            <>
+                                                                <input
+                                                                    ref={sendInFileInputRef}
+                                                                    type="file"
+                                                                    accept="image/*"
+                                                                    style={{ display: 'none' }}
+                                                                    onChange={(event) => {
+                                                                        const file = event.target.files && event.target.files[0];
+                                                                        setManualSendInFile(file || null);
+                                                                        setCapturedSendInPhoto(file ? 'manual' : null);
+                                                                    }}
+                                                                />
+                                                                <Button variant="outline" onClick={() => sendInFileInputRef.current && sendInFileInputRef.current.click()}>
+                                                                    Choose Send-In Photo
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                        {selectedGatePass?.dispatchStatus === 'loaded' && (
+                                                            <>
+                                                                <input
+                                                                    ref={releaseFileInputRef}
+                                                                    type="file"
+                                                                    accept="image/*"
+                                                                    style={{ display: 'none' }}
+                                                                    onChange={(event) => {
+                                                                        const file = event.target.files && event.target.files[0];
+                                                                        setManualReleaseFile(file || null);
+                                                                        setCapturedReleasePhoto(file ? 'manual' : null);
+                                                                    }}
+                                                                />
+                                                                <Button variant="outline" onClick={() => releaseFileInputRef.current && releaseFileInputRef.current.click()}>
+                                                                    Choose After Loading Photo
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                        <Button
+                                                            variant="secondary"
+                                                            onClick={async () => {
+                                                                const chosenFile = selectedGatePass?.dispatchStatus === 'loaded' ? manualReleaseFile : manualSendInFile;
+                                                                const fieldName = selectedGatePass?.dispatchStatus === 'loaded' ? 'afterLoadingPhoto' : 'sendInPhoto';
+                                                                const formData = new FormData();
+                                                                formData.append('action', selectedGatePass?.dispatchStatus === 'loaded' ? 'release' : 'send_in');
+                                                                formData.append('customerName', verificationForm.customerName || '');
+                                                                formData.append('vehicleNo', verificationForm.vehicleNo || '');
+                                                                formData.append('driverName', verificationForm.driverName || '');
+                                                                formData.append(fieldName, chosenFile, chosenFile?.name || 'manual.jpg');
+                                                                const resp = await fetch(`${API_BASE}/watchman/verify/${selectedGatePass.gatePassId}`, { method: 'POST', body: formData });
+                                                                if (resp.ok) {
+                                                                    const res = await resp.json();
+                                                                    toast({ title: 'Uploaded', description: res.message });
+                                                                    setShowVerifyDialog(false);
+                                                                    fetchData();
+                                                                }
+                                                            }}
+                                                            disabled={selectedGatePass?.dispatchStatus === 'loaded' ? !manualReleaseFile : !manualSendInFile}
+                                                        >
+                                                            Upload Chosen
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Photo Preview Section - Show captured photo for review */}
+                                {((selectedGatePass?.dispatchStatus === 'ready_for_pickup' || selectedGatePass?.dispatchStatus === 'ready_for_load') && capturedSendInPhoto) ||
+                                (selectedGatePass?.dispatchStatus === 'loaded' && capturedReleasePhoto) ? (
+                                    <div className="mt-4 space-y-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="font-semibold text-sm text-blue-900">📷 Captured Photo Preview</h4>
+                                            <Badge className="bg-green-600">Ready to Submit</Badge>
+                                        </div>
+                                        
+                                        {capturedSendInPhoto && capturedSendInPhoto !== 'manual' && (
+                                            <img 
+                                                src={capturedSendInPhoto} 
+                                                alt="Captured Send-In Photo" 
+                                                className="w-full max-h-64 rounded border border-blue-300" 
+                                                style={{ objectFit: 'contain' }}
+                                            />
+                                        )}
+                                        
+                                        {capturedReleasePhoto && capturedReleasePhoto !== 'manual' && (
+                                            <img 
+                                                src={capturedReleasePhoto} 
+                                                alt="Captured Release Photo" 
+                                                className="w-full max-h-64 rounded border border-blue-300" 
+                                                style={{ objectFit: 'contain' }}
+                                            />
+                                        )}
+
+                                        <div className="flex gap-2">
+                                            <Button 
+                                                variant="outline" 
+                                                onClick={() => {
+                                                    if (selectedGatePass?.dispatchStatus === 'ready_for_pickup' || selectedGatePass?.dispatchStatus === 'ready_for_load') {
+                                                        setCapturedSendInPhoto(null);
+                                                    } else {
+                                                        setCapturedReleasePhoto(null);
+                                                    }
+                                                    startCamera();
+                                                }}
+                                                className="flex-1"
+                                            >
+                                                🔄 Take Another Photo
+                                            </Button>
+                                            <Button 
+                                                variant="secondary" 
+                                                onClick={() => startCamera()}
+                                                className="flex-1"
+                                            >
+                                                📸 Clear & Retake
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : null}
                             </div>
                         )}
                     </div>
@@ -1616,7 +2006,7 @@ const WatchmanDepartment = () => {
                 </div>
             </div>
         </div>
-       </div> 
+         </div>
     );
 };
 
