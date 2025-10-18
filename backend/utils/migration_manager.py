@@ -208,7 +208,7 @@ class MigrationManager:
             id INT AUTO_INCREMENT PRIMARY KEY,
             employee_id INT NOT NULL,
             name VARCHAR(100),
-            leave_type ENUM('casual', 'sick', 'earned', 'maternity', 'paternity') NOT NULL,
+            leave_type ENUM('CASUAL', 'SICK', 'EARNED', 'MATERNITY', 'PATERNITY') NOT NULL,
             start_date DATE NOT NULL,
             end_date DATE NOT NULL,
             days_requested FLOAT NOT NULL,
