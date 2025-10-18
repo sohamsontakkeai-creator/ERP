@@ -390,6 +390,14 @@ class MigrationManager:
                 if not self.column_exists(connection, 'dispatch_request', 'updated_at'):
                     connection.execute(text("ALTER TABLE dispatch_request ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"))
                     connection.commit()
+                 # Add photo columns to gate_pass table for watchman capture
+                if not self.column_exists(connection, 'gate_pass', 'send_in_photo'):
+                    connection.execute(text("ALTER TABLE gate_pass ADD COLUMN send_in_photo VARCHAR(500) NULL"))
+                    connection.commit()
+
+                if not self.column_exists(connection, 'gate_pass', 'after_loading_photo'):
+                    connection.execute(text("ALTER TABLE gate_pass ADD COLUMN after_loading_photo VARCHAR(500) NULL"))
+                    connection.commit()
                 
                 print("✅ Dispatch tables updated successfully!")
             else:
