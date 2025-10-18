@@ -105,6 +105,8 @@ class GatePass(db.Model):
     status = db.Column(db.String(50), default='pending')  # pending, verified, released
     issued_at = db.Column(db.DateTime, default=datetime.utcnow)
     verified_at = db.Column(db.DateTime, nullable=True)
+    send_in_photo = db.Column(db.String(500), nullable=True)
+    after_loading_photo = db.Column(db.String(500), nullable=True)
 
     def to_dict(self):
         """Convert model instance to dictionary"""
@@ -117,7 +119,9 @@ class GatePass(db.Model):
             'driverContact': self.driver_contact,
             'status': self.status,
             'issuedAt': self.issued_at.isoformat(),
-            'verifiedAt': self.verified_at.isoformat() if self.verified_at else None
+            'verifiedAt': self.verified_at.isoformat() if self.verified_at else None,
+            'sendInPhoto': self.send_in_photo,
+            'afterLoadingPhoto': self.after_loading_photo
         }
 
 class Vehicle(db.Model):
