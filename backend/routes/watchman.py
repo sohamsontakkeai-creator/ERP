@@ -33,9 +33,14 @@ def get_all_gate_passes():
 
 @watchman_bp.route('/watchman/verify/<int:gate_pass_id>', methods=['POST'])
 def verify_customer_pickup(gate_pass_id):
-    """Verify customer identity and complete pickup or send in"""
+    """Verify customer identity and complete pickup or send in.
+
+    Accepts JSON body or multipart/form-data with optional images:
+      - sendInPhoto -> file when action == 'send_in'
+      - afterLoadingPhoto -> file when action == 'release' (after loading)
+    """
     try:
-         # Support both JSON and multipart
+        # Support both JSON and multipart
         if request.content_type and request.content_type.startswith('multipart/form-data'):
             data = request.form.to_dict() or {}
         else:
@@ -48,6 +53,12 @@ def verify_customer_pickup(gate_pass_id):
         os.makedirs(upload_folder, exist_ok=True)
 
         saved_files = {}
+
+        # 🆕 Helper: build public URL for uploaded files
+        def build_public_url(filename):
+            from flask import url_for
+            return url_for('uploaded_file', filename=filename, _external=True)
+
         # send in photo
         if 'sendInPhoto' in request.files:
             f = request.files['sendInPhoto']
@@ -56,6 +67,7 @@ def verify_customer_pickup(gate_pass_id):
                 filepath = os.path.join(upload_folder, filename)
                 f.save(filepath)
                 saved_files['send_in_photo'] = filepath
+                saved_files['send_in_photo_url'] = build_public_url(filename)  # 🆕 add public URL
 
         # after loading photo
         if 'afterLoadingPhoto' in request.files:
@@ -65,20 +77,31 @@ def verify_customer_pickup(gate_pass_id):
                 filepath = os.path.join(upload_folder, filename)
                 f.save(filepath)
                 saved_files['after_loading_photo'] = filepath
+                saved_files['after_loading_photo_url'] = build_public_url(filename)  # 🆕 add public URL
 
         # Merge files info into data passed to service
         data.update(saved_files)
+
+        # Pass full data to your WatchmanService
         result = WatchmanService.verify_customer_identity(gate_pass_id, data, action)
+
+        # 🆕 Optional: also return public URLs in the response for frontend convenience
+        if 'send_in_photo_url' in saved_files:
+            result['send_in_photo_url'] = saved_files['send_in_photo_url']
+        if 'after_loading_photo_url' in saved_files:
+            result['after_loading_photo_url'] = saved_files['after_loading_photo_url']
 
         # Handle identity mismatch case
         if result.get('status') == 'identity_mismatch':
-            return jsonify(result), 409 
+            return jsonify(result), 409
+
         return jsonify(result), 200
 
     except ValueError as ve:
         return jsonify({'error': str(ve)}), 400
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 
 @watchman_bp.route('/watchman/reject/<int:gate_pass_id>', methods=['POST'])
