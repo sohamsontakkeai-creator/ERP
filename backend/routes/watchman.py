@@ -2,7 +2,9 @@
 Watchman Routes Module
 API endpoints for watchman operations (gate security)
 """
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
+import os
+from werkzeug.utils import secure_filename
 from services.watchman_service import WatchmanService
 from services.guest_list_service import GuestListService
 
@@ -33,14 +35,44 @@ def get_all_gate_passes():
 def verify_customer_pickup(gate_pass_id):
     """Verify customer identity and complete pickup or send in"""
     try:
-        data = request.get_json() or {}
-        action = data.get('action', 'release')  # Default to 'release' for backward compatibility
+         # Support both JSON and multipart
+        if request.content_type and request.content_type.startswith('multipart/form-data'):
+            data = request.form.to_dict() or {}
+        else:
+            data = request.get_json() or {}
+
+        action = data.get('action', 'release')
+
+        # Handle file uploads
+        upload_folder = os.path.join(os.getcwd(), 'backend', 'uploads')
+        os.makedirs(upload_folder, exist_ok=True)
+
+        saved_files = {}
+        # send in photo
+        if 'sendInPhoto' in request.files:
+            f = request.files['sendInPhoto']
+            if f and f.filename:
+                filename = secure_filename(f.filename)
+                filepath = os.path.join(upload_folder, filename)
+                f.save(filepath)
+                saved_files['send_in_photo'] = filepath
+
+        # after loading photo
+        if 'afterLoadingPhoto' in request.files:
+            f = request.files['afterLoadingPhoto']
+            if f and f.filename:
+                filename = secure_filename(f.filename)
+                filepath = os.path.join(upload_folder, filename)
+                f.save(filepath)
+                saved_files['after_loading_photo'] = filepath
+
+        # Merge files info into data passed to service
+        data.update(saved_files)
         result = WatchmanService.verify_customer_identity(gate_pass_id, data, action)
 
         # Handle identity mismatch case
         if result.get('status') == 'identity_mismatch':
-            return jsonify(result), 409  # Conflict status code
-
+            return jsonify(result), 409 
         return jsonify(result), 200
 
     except ValueError as ve:
