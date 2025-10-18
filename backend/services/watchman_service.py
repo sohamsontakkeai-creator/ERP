@@ -128,6 +128,14 @@ class WatchmanService:
 
             # Update gate pass with verification
             gate_pass.verified_at = datetime.utcnow()
+            
+            # Save any provided photo paths (from multipart upload)
+            if verification_data.get('send_in_photo'):
+                gate_pass.send_in_photo = verification_data.get('send_in_photo')
+
+            if verification_data.get('after_loading_photo'):
+                gate_pass.after_loading_photo = verification_data.get('after_loading_photo')
+
 
             # Update vehicle number if provided
             if verification_data.get('vehicleNo'):
