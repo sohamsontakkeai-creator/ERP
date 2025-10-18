@@ -7,11 +7,11 @@ from . import db
 
 
 class LeaveType(Enum):
-    CASUAL = "casual"
-    SICK = "sick"
-    EARNED = "earned"
-    MATERNITY = "maternity"
-    PATERNITY = "paternity"
+    CASUAL = "CASUAL"
+    SICK = "SICK"
+    EARNED = "EARNED"
+    MATERNITY = "MATERNITY"
+    PATERNITY = "PATERNITY"
 
 
 class LeaveStatus(Enum):
