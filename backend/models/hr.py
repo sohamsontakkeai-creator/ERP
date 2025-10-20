@@ -53,6 +53,7 @@ class InterviewStatus(Enum):
     NO_SHOW = "NO_SHOW"
 
 
+
 class SalaryType(Enum):
     DAILY = "DAILY"
     MONTHLY = "MONTHLY"
