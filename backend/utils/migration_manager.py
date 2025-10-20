@@ -299,7 +299,7 @@ class MigrationManager:
             duration_minutes INT DEFAULT 60,
             interviewers VARCHAR(500),
             location VARCHAR(200),
-            status ENUM('scheduled', 'completed', 'cancelled', 'no_show') DEFAULT 'scheduled',
+            status ENUM('SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW') DEFAULT 'SCHEDULED',
             feedback TEXT,
             rating FLOAT,
             decision VARCHAR(50),
