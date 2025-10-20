@@ -1,7 +1,10 @@
 from flask import Blueprint, request, jsonify
 from services.hr_service import HRService
 from datetime import datetime
+import traceback
+import logging
 
+logger = logging.getLogger(__name__)
 
 hr_bp = Blueprint('hr', __name__)
 
@@ -349,7 +352,9 @@ def get_job_applications():
         applications = HRService.get_job_applications(job_posting_id=job_posting_id, status=status)
         return jsonify(applications), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Error fetching job applications: {e}")
+        logger.error(traceback.format_exc())
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 @hr_bp.route('/hr/job-applications', methods=['POST'])
 def create_job_application():
