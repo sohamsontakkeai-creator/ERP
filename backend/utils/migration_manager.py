@@ -256,7 +256,7 @@ class MigrationManager:
             description TEXT NOT NULL,
             requirements TEXT,
             responsibilities TEXT,
-            status ENUM('open', 'closed', 'filled') DEFAULT 'open',
+            status ENUM('OPEN', 'CLOSED', 'FILLED') DEFAULT 'OPEN',
             posted_by INT,
             application_deadline DATE,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
