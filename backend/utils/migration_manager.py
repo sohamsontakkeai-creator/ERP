@@ -269,6 +269,7 @@ class MigrationManager:
         CREATE TABLE IF NOT EXISTS job_applications (
             id INT AUTO_INCREMENT PRIMARY KEY,
             job_posting_id INT NOT NULL,
+            candidate_id INT NOT NULL,
             applicant_name VARCHAR(200) NOT NULL,
             applicant_email VARCHAR(255) NOT NULL,
             applicant_phone VARCHAR(20),
