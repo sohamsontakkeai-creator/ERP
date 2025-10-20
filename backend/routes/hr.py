@@ -1,10 +1,8 @@
 from flask import Blueprint, request, jsonify
 from services.hr_service import HRService
 from datetime import datetime
-import traceback
-import logging
 
-logger = logging.getLogger(__name__)
+
 hr_bp = Blueprint('hr', __name__)
 
 @hr_bp.route('/api/health/hr', methods=['GET'])
@@ -122,16 +120,12 @@ def get_attendance_summary():
 def create_leave_request(employee_id):
     data = request.get_json()
     try:
-        logger.info(f"Creating leave for employee {employee_id} with data: {data}")
         leave = HRService.create_leave_request(employee_id, data)
         return jsonify(leave), 201
     except ValueError as ve:
-        logger.warning(f"ValueError: {ve}")
         return jsonify({'error': str(ve)}), 404
     except Exception as e:
-        logger.error(f"Unhandled error: {e}")
-        logger.error(traceback.format_exc())
-        return jsonify({'error': 'Internal server error'}), 500
+        return jsonify({'error': str(e)}), 500
 
 @hr_bp.route('/hr/leaves', methods=['GET'])
 def get_leave_requests():
