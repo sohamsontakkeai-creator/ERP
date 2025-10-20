@@ -829,9 +829,6 @@ const WatchmanDepartment = () => {
 
             {/* Order Status Bar */}
             <div className="max-w-7xl mx-auto px-6 py-4">
-                <OrderStatusBar className="mb-4" />
-           
-
             {/* Main Content */}
             <div className="px-6 py-6">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
