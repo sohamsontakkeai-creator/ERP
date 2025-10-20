@@ -278,7 +278,8 @@ class MigrationManager:
             current_salary FLOAT,
             expected_salary FLOAT,
             availability_date DATE,
-            status ENUM('submitted', 'under_review', 'shortlisted', 'interview_scheduled', 'interviewed', 'offered', 'accepted', 'rejected', 'withdrawn') DEFAULT 'submitted',
+            status ENUM('SUBMITTED', 'UNDER_REVIEW', 'SHORTLISTED', 'INTERVIEW_SCHEDULED', 'INTERVIEWED', 'OFFERED', 'ACCEPTED', 'REJECTED', 'WITHDRAWN'
+) DEFAULT 'SUBMITTED',
             notes TEXT,
             reviewed_by INT,
             reviewed_at DATETIME,
