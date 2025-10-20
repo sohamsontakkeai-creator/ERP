@@ -38,7 +38,7 @@ def create_app(config_name=None):
     # Enable CORS
     CORS(
         app,
-        origins=["https://agent-68f5e420e0e1f2298e77a5fe--erp-alankar.netlify.app"],
+        origins=["https://erp-4118.vercel.app"],
         supports_credentials=True,
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"]
