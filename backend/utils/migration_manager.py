@@ -213,7 +213,7 @@ class MigrationManager:
             end_date DATE NOT NULL,
             days_requested FLOAT NOT NULL,
             reason TEXT,
-            status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+            status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
             approved_by INT,
             approved_at DATETIME,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
