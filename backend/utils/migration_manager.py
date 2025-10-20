@@ -483,7 +483,7 @@ class MigrationManager:
             id_proof_type VARCHAR(50),
             id_proof_number VARCHAR(100),
             visitor_photo_path VARCHAR(500),
-            status ENUM('scheduled', 'checked_in', 'checked_out', 'cancelled') DEFAULT 'scheduled',
+            status ENUM(('SCHEDULED', 'CHECKED_IN', 'CHECKED_OUT', 'CANCELLED') DEFAULT 'SCHEDULED',
             notes TEXT,
             created_by VARCHAR(100),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
