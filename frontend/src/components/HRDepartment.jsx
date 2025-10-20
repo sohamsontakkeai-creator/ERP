@@ -1618,9 +1618,9 @@ const DashboardView = ({ employees = [] }) => {  // ✅ Accept employees as prop
     const halfDayCount = todayRecords.filter(r => r.status === 'half_day').length;
 
     // Calculate leave summary
-    const pendingLeaves = leaveRequests.filter(l => l.status === 'PENDING').length;
-    const approvedLeaves = leaveRequests.filter(l => l.status === 'APPROVED').length;
-    const rejectedLeaves = leaveRequests.filter(l => l.status === 'REJECTEDE').length;
+    const pendingLeaves = leaveRequests.filter(l => l.status === 'pending').length;
+    const approvedLeaves = leaveRequests.filter(l => l.status === 'approved').length;
+    const rejectedLeaves = leaveRequests.filter(l => l.status === 'rejected').length;
 
       const filteredLeaveRequests = leaveRequests.filter(leave => {
         if (!leaveSearchQuery.trim()) return true;
@@ -1782,11 +1782,11 @@ const DashboardView = ({ employees = [] }) => {  // ✅ Accept employees as prop
                         leave.status === 'rejected' ? 'bg-red-100 text-red-800' :
                         'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {leave.status || 'PENDING'}
+                        {leave.status || 'pending'}
                       </span>
                     </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {leave.status === 'PENDING' ? (
+                    {leave.status === 'pending' ? (
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleApproveLeaveRequest(leave.id, true)}
