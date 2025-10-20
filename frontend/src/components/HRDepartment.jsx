@@ -942,7 +942,7 @@ const HRDepartment = () => {
         return;
       }
 
-      const response = await fetch(`${API_BASE}/hr/employees/${leaveForm.employeeId}/leaves`, {
+      const response = await fetch(`${API_BASE}/api/hr/employees/${leaveForm.employeeId}/leaves`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
