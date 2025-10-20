@@ -1782,11 +1782,11 @@ const DashboardView = ({ employees = [] }) => {  // ✅ Accept employees as prop
                         leave.status === 'rejected' ? 'bg-red-100 text-red-800' :
                         'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {leave.status || 'Pending'}
+                        {leave.status || 'PENDING'}
                       </span>
                     </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {leave.status === 'pending' ? (
+                    {leave.status === 'PENDING' ? (
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleApproveLeaveRequest(leave.id, true)}
