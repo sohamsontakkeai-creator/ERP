@@ -1618,9 +1618,9 @@ const DashboardView = ({ employees = [] }) => {  // ✅ Accept employees as prop
     const halfDayCount = todayRecords.filter(r => r.status === 'half_day').length;
 
     // Calculate leave summary
-    const pendingLeaves = leaveRequests.filter(l => l.status === 'pending').length;
-    const approvedLeaves = leaveRequests.filter(l => l.status === 'approved').length;
-    const rejectedLeaves = leaveRequests.filter(l => l.status === 'rejected').length;
+    const pendingLeaves = leaveRequests.filter(l => l.status === 'PENDING').length;
+    const approvedLeaves = leaveRequests.filter(l => l.status === 'APPROVED').length;
+    const rejectedLeaves = leaveRequests.filter(l => l.status === 'REJECTEDE').length;
 
       const filteredLeaveRequests = leaveRequests.filter(leave => {
         if (!leaveSearchQuery.trim()) return true;
