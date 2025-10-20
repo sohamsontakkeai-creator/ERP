@@ -244,7 +244,7 @@ class MigrationManager:
         );
         """
 
-       create_job_postings_table = """
+        create_job_postings_table = """
         CREATE TABLE IF NOT EXISTS job_postings (
             id INT AUTO_INCREMENT PRIMARY KEY,
             title VARCHAR(200) NOT NULL,
