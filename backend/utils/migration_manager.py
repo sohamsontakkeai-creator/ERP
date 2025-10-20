@@ -244,7 +244,7 @@ class MigrationManager:
         );
         """
 
-        create_job_postings_table = """
+       create_job_postings_table = """
         CREATE TABLE IF NOT EXISTS job_postings (
             id INT AUTO_INCREMENT PRIMARY KEY,
             title VARCHAR(200) NOT NULL,
@@ -256,7 +256,7 @@ class MigrationManager:
             description TEXT NOT NULL,
             requirements TEXT,
             responsibilities TEXT,
-            status ENUM('OPEN', 'CLOSED', 'FILLED') DEFAULT 'OPEN',
+            status ENUM('open', 'closed', 'filled') DEFAULT 'open',
             posted_by INT,
             application_deadline DATE,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -278,8 +278,7 @@ class MigrationManager:
             current_salary FLOAT,
             expected_salary FLOAT,
             availability_date DATE,
-            status ENUM('SUBMITTED', 'UNDER_REVIEW', 'SHORTLISTED', 'INTERVIEW_SCHEDULED', 'INTERVIEWED', 'OFFERED', 'ACCEPTED', 'REJECTED', 'WITHDRAWN'
-) DEFAULT 'SUBMITTED',
+            status ENUM('submitted', 'under_review', 'shortlisted', 'interview_scheduled', 'interviewed', 'offered', 'accepted', 'rejected', 'withdrawn') DEFAULT 'submitted',
             notes TEXT,
             reviewed_by INT,
             reviewed_at DATETIME,
@@ -289,7 +288,6 @@ class MigrationManager:
             FOREIGN KEY (reviewed_by) REFERENCES employees(id)
         );
         """
-
         create_interviews_table = """
         CREATE TABLE IF NOT EXISTS interviews (
             id INT AUTO_INCREMENT PRIMARY KEY,
