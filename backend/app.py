@@ -38,7 +38,7 @@ def create_app(config_name=None):
     # Enable CORS
     CORS(
         app,
-        origins=["https://erp-4118.vercel.app"],
+        origins=["https://erp-94ft.vercel.app"],
         supports_credentials=True,
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization"]
