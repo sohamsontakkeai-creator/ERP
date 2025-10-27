@@ -193,7 +193,7 @@ class MigrationManager:
             date DATE NOT NULL,
             check_in_time TIME,
             check_out_time TIME,
-            status ENUM('present', 'absent', 'late', 'half_day') DEFAULT 'present',
+            status ENUM('PRESENT', 'ABSENT', 'LATE', 'HALF_DAY') DEFAULT 'PRESENT',
             hours_worked FLOAT,
             notes TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -206,12 +206,13 @@ class MigrationManager:
         CREATE TABLE IF NOT EXISTS leaves (
             id INT AUTO_INCREMENT PRIMARY KEY,
             employee_id INT NOT NULL,
-            leave_type ENUM('casual', 'sick', 'earned', 'maternity', 'paternity') NOT NULL,
+            name VARCHAR(100),
+            leave_type ENUM('CASUAL', 'SICK', 'EARNED', 'MATERNITY', 'PATERNITY') NOT NULL,
             start_date DATE NOT NULL,
             end_date DATE NOT NULL,
             days_requested FLOAT NOT NULL,
             reason TEXT,
-            status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+            status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
             approved_by INT,
             approved_at DATETIME,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -239,26 +240,6 @@ class MigrationManager:
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             FOREIGN KEY (employee_id) REFERENCES employees(id)
-        );
-        """
-
-        create_performance_reviews_table = """
-        CREATE TABLE IF NOT EXISTS performance_reviews (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            employee_id INT NOT NULL,
-            review_period VARCHAR(20) NOT NULL,
-            review_date DATE NOT NULL,
-            reviewer_id INT NOT NULL,
-            overall_rating ENUM('excellent', 'good', 'average', 'needs_improvement') NOT NULL,
-            goals_achievement FLOAT,
-            strengths TEXT,
-            areas_for_improvement TEXT,
-            development_plan TEXT,
-            comments TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            FOREIGN KEY (employee_id) REFERENCES employees(id),
-            FOREIGN KEY (reviewer_id) REFERENCES employees(id)
         );
         """
 
