@@ -38,3 +38,5 @@ pdfkit==1.0.0
 
 # Face Recognition (OpenCV)
 opencv-python==4.8.1.78
+Pillow==10.2.0
+
