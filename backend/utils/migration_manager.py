@@ -347,9 +347,6 @@ class MigrationManager:
             connection.execute(text(create_payrolls_table))
             connection.commit()
             
-            connection.execute(text(create_performance_reviews_table))
-            connection.commit()
-            
             connection.execute(text(create_job_postings_table))
             connection.commit()
             
