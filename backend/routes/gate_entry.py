@@ -492,4 +492,4 @@ def get_attendance_status(phone):
             'employee_status': employee.status,
             'attendance': None,
             'message': 'No attendance marked for today'
-        }) 
+        })
