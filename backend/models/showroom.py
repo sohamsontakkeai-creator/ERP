@@ -148,7 +148,6 @@ class Vehicle(db.Model):
             'vehicleType': self.vehicle_type,
             'driverName': self.driver_name,
             'driverContact': self.driver_contact,
-            'driverLicense': self.driver_license,
             'capacity': self.capacity,
             'status': self.status,
             'currentLocation': self.current_location,
