@@ -1002,7 +1002,7 @@ const TransportDepartment = () => {
         driverContact: newVehicle.driver_phone
       };
       
-      const response = await fetch('/api/fleet/add', {
+      const response = await fetch('${API_BASE}/fleet/add', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1074,7 +1074,7 @@ const TransportDepartment = () => {
         currentLocation: editVehicle.current_location,
         notes: editVehicle.notes
       };
-      const response = await fetch(`/api/fleet/${vehicleId}`, {
+      const response = await fetch(`${API_BASE}/fleet/${vehicleId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -1119,7 +1119,7 @@ const TransportDepartment = () => {
 
   const handleDeleteVehicle = async (vehicleId) => {
     try {
-      const response = await fetch(`/api/fleet/${vehicleId}`, { method: 'DELETE' });
+      const response = await fetch(`${API_BASE}/fleet/${vehicleId}`, { method: 'DELETE' });
       const respJson = await response.json().catch(() => ({}));
       if (response.ok) {
         toast({ title: 'Deleted', description: 'Vehicle removed from fleet' });
