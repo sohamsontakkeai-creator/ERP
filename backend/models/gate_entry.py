@@ -3,6 +3,7 @@ Gate Entry System Models
 """
 from datetime import datetime
 from models import db
+from sqlalchemy.dialects.mysql import LONGTEXT 
 
 class GateUser(db.Model):
     """Model for registered gate entry users"""
