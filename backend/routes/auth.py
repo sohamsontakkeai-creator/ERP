@@ -8,6 +8,7 @@ from models.user import User, UserStatus, db
 from models.password_reset_token import PasswordResetToken
 from werkzeug.security import check_password_hash, generate_password_hash
 import threading
+from threading import Thread
 
 auth_bp = Blueprint('auth', __name__)
 
