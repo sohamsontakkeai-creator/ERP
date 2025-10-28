@@ -228,29 +228,31 @@ def forgot_password():
         frontend_base_url = current_app.config.get('FRONTEND_BASE_URL', 'http://localhost:5173')
         reset_url = f"{frontend_base_url}/reset-password?token={reset_token_obj.token}"
 
-        # ✅ Send email in a background thread
-        def send_email():
-            try:
-                from app import mail
-                msg = Message(
-                    'Password Reset Request',
-                    sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                    recipients=[user.email]
-                )
-                msg.body = f'Click the link to reset your password: {reset_url}'
-                with mail.connect() as conn:
-                    conn.send(msg)
-                print(f"✅ Reset email sent to {user.email}")
-            except Exception as e:
-                print(f"❌ Failed to send email: {e}")
+        # ✅ Helper function to send email asynchronously
+        def send_async_email(app, msg):
+            with app.app_context():
+                try:
+                    mail.send(msg)
+                    print(f"✅ Reset email sent to {user.email}")
+                except Exception as e:
+                    print(f"❌ Failed to send email: {e}")
 
-        threading.Thread(target=send_email).start()
+        # Create the email message
+        msg = Message(
+            'Password Reset Request',
+            sender=current_app.config['MAIL_DEFAULT_SENDER'],
+            recipients=[user.email]
+        )
+        msg.body = f'Click the link to reset your password: {reset_url}'
+
+        # Start a background thread to send the email
+        threading.Thread(target=send_async_email, args=(current_app._get_current_object(), msg)).start()
 
         # Return response immediately
         return jsonify({
             'message': 'A reset link has been sent to your email address.',
-            'reset_token': reset_token_obj.token,
-            'reset_url': reset_url
+            'reset_token': reset_token_obj.token,  # remove in production
+            'reset_url': reset_url  # remove in production
         }), 200
 
     except Exception as e:
