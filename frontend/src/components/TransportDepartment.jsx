@@ -1002,7 +1002,7 @@ const TransportDepartment = () => {
         driverContact: newVehicle.driver_phone
       };
       
-      const response = await fetch('${API_BASE}/fleet/add', {
+      const response = await fetch(`${API_BASE}/fleet/add`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
