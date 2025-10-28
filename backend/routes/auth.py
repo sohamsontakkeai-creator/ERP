@@ -7,6 +7,7 @@ from flask_mail import Message
 from models.user import User, UserStatus, db
 from models.password_reset_token import PasswordResetToken
 from werkzeug.security import check_password_hash, generate_password_hash
+import threading
 
 auth_bp = Blueprint('auth', __name__)
 
