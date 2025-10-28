@@ -8,7 +8,6 @@ from models.user import User, UserStatus, db
 from models.password_reset_token import PasswordResetToken
 from werkzeug.security import check_password_hash, generate_password_hash
 import threading
-from app import mail 
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -224,36 +223,32 @@ def forgot_password():
         if not user:
             return jsonify({'error': 'No account found with this email'}), 404
 
-        # Generate reset token
         reset_token_obj = PasswordResetToken.create_token(user.id)
         frontend_base_url = current_app.config.get('FRONTEND_BASE_URL', 'http://localhost:5173')
         reset_url = f"{frontend_base_url}/reset-password?token={reset_token_obj.token}"
 
-        # ✅ Helper function to send email asynchronously
-        def send_async_email(app, msg):
+        # Send email in a background thread
+        def send_email(app, user_email, reset_url):
             with app.app_context():
+                mail = current_app.extensions['mail']  # Access Mail instance
+                msg = Message(
+                    'Password Reset Request',
+                    sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                    recipients=[user_email]
+                )
+                msg.body = f'Click the link to reset your password: {reset_url}'
                 try:
                     mail.send(msg)
-                    print(f"✅ Reset email sent to {user.email}")
+                    print(f"✅ Reset email sent to {user_email}")
                 except Exception as e:
                     print(f"❌ Failed to send email: {e}")
 
-        # Create the email message
-        msg = Message(
-            'Password Reset Request',
-            sender=current_app.config['MAIL_DEFAULT_SENDER'],
-            recipients=[user.email]
-        )
-        msg.body = f'Click the link to reset your password: {reset_url}'
+        Thread(target=send_email, args=(current_app._get_current_object(), user.email, reset_url)).start()
 
-        # Start a background thread to send the email
-        threading.Thread(target=send_async_email, args=(current_app._get_current_object(), msg)).start()
-
-        # Return response immediately
         return jsonify({
             'message': 'A reset link has been sent to your email address.',
-            'reset_token': reset_token_obj.token,  # remove in production
-            'reset_url': reset_url  # remove in production
+            'reset_token': reset_token_obj.token,
+            'reset_url': reset_url
         }), 200
 
     except Exception as e:
