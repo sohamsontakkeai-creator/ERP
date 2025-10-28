@@ -176,7 +176,7 @@ class MigrationManager:
             department VARCHAR(100) NOT NULL,
             designation VARCHAR(100) NOT NULL,
             joining_date DATE NOT NULL,
-            salary_type enum('daily','monthly','hourly')
+            salary_type enum('daily','monthly','hourly'),
             salary FLOAT NOT NULL,
             status VARCHAR(20) DEFAULT 'active',
             manager_id INT,
