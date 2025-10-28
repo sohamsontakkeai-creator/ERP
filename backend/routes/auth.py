@@ -213,39 +213,43 @@ def delete_user(user_id):
 
 @auth_bp.route('/auth/forgot-password', methods=['POST'])
 def forgot_password():
-    """Send password reset email to user"""
     try:
         data = request.get_json() or {}
-
         if 'email' not in data:
             return jsonify({'error': 'Email is required'}), 400
 
         user = User.query.filter_by(email=data['email']).first()
         if not user:
-            # Reveal error if email not found
-            return jsonify({'error': 'No account found with the provided email address. Please check and try again.'}), 404
+            return jsonify({'error': 'No account found with this email'}), 404
 
-        # Generate reset token using PasswordResetToken model
+        # Generate reset token
         reset_token_obj = PasswordResetToken.create_token(user.id)
-
-        # For testing purposes, return the token in response
-        # In production, send email with reset link
-        # Use frontend base URL from config or environment variable, fallback to localhost with port 5173
         frontend_base_url = current_app.config.get('FRONTEND_BASE_URL', 'http://localhost:5173')
         reset_url = f"{frontend_base_url}/reset-password?token={reset_token_obj.token}"
 
-        # Send email with reset_url
-        from app import mail
-        msg = Message('Password Reset Request',
-                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      recipients=[user.email])
-        msg.body = f'Click the link to reset your password: {reset_url}'
-        mail.send(msg)
+        # ✅ Send email in a background thread
+        def send_email():
+            try:
+                from app import mail
+                msg = Message(
+                    'Password Reset Request',
+                    sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                    recipients=[user.email]
+                )
+                msg.body = f'Click the link to reset your password: {reset_url}'
+                with mail.connect() as conn:
+                    conn.send(msg)
+                print(f"✅ Reset email sent to {user.email}")
+            except Exception as e:
+                print(f"❌ Failed to send email: {e}")
 
+        threading.Thread(target=send_email).start()
+
+        # Return response immediately
         return jsonify({
             'message': 'A reset link has been sent to your email address.',
-            'reset_token': reset_token_obj.token,  # Remove in production
-            'reset_url': reset_url  # Remove in production
+            'reset_token': reset_token_obj.token,
+            'reset_url': reset_url
         }), 200
 
     except Exception as e:
