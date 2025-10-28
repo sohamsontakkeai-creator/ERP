@@ -15,27 +15,28 @@ mail = Mail()  # Initialize Mail instance globally
 
 
 def create_app(config_name=None):
-    """
-    Application factory pattern
-    
-    Args:
-        config_name: Configuration environment name
-        
-    Returns:
-        Flask: Configured Flask application instance
-    """
     app = Flask(__name__)
 
     # Load configuration
     config_name = config_name or os.getenv('FLASK_CONFIG', 'default')
     app.config.from_object(config[config_name])
 
-    # Initialize extensions
+    # Initialize core extensions
     db.init_app(app)
     mail.init_app(app)
     Session(app)
 
-    # Enable CORS
+    # Upload folder
+    app.config["UPLOAD_FOLDER"] = os.path.join(os.getcwd(), "backend", "uploads")
+
+    @app.route('/uploads/<path:filename>')
+    def uploaded_file(filename):
+        return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
+
+    # ✅ Register blueprints BEFORE enabling CORS
+    register_blueprints(app)
+
+    # ✅ Enable CORS AFTER routes exist
     CORS(
         app,
         origins=["https://erp1-black.vercel.app"],
@@ -44,20 +45,15 @@ def create_app(config_name=None):
         allow_headers=["Content-Type", "Authorization"]
     )
 
-    # 🔧 Define upload folder (make sure it matches your actual path)
-    app.config["UPLOAD_FOLDER"] = os.path.join(
-        os.getcwd(), "backend", "uploads"
-    )
+    # ✅ Ensure CORS headers even for errors (404, 500, etc.)
+    @app.after_request
+    def add_cors_headers(response):
+        response.headers["Access-Control-Allow-Origin"] = "https://erp1-black.vercel.app"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+        response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,DELETE,OPTIONS"
+        return response
 
-    # 🖼 Route to serve uploaded images
-    @app.route('/uploads/<path:filename>')
-    def uploaded_file(filename):
-        return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
-
-    # Register blueprints
-    register_blueprints(app)
-
-    # Initialize database if not in testing mode
+    # Initialize DB if not testing
     if not app.config.get("TESTING", False):
         initialize_database(app)
 
