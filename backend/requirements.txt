@@ -37,6 +37,6 @@ authlib==1.2.0
 pdfkit==1.0.0
 
 # Face Recognition (OpenCV)
-opencv-python==4.8.1.78
+opencv-contrib-python==4.8.1.78
 Pillow==10.2.0
 
