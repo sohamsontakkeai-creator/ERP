@@ -235,17 +235,12 @@ def forgot_password():
         reset_url = f"{frontend_base_url}/reset-password?token={reset_token_obj.token}"
 
         # Send email with reset_url
-        from flask_mail import Message
-        mail = current_app.extensions.get('mail')
-        if mail:
-            msg = Message('Password Reset Request',
-                          sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                          recipients=[user.email])
-            msg.body = f'Click the link to reset your password: {reset_url}'
-            mail.send(msg)
-        else:
-            # Mail extension not initialized, fallback to returning token in response
-            pass
+        from app import mail
+        msg = Message('Password Reset Request',
+                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
+                      recipients=[user.email])
+        msg.body = f'Click the link to reset your password: {reset_url}'
+        mail.send(msg)
 
         return jsonify({
             'message': 'A reset link has been sent to your email address.',
