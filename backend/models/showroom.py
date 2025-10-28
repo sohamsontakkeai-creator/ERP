@@ -133,7 +133,6 @@ class Vehicle(db.Model):
     vehicle_type = db.Column(db.String(50), nullable=False)  # truck, van, pickup, etc.
     driver_name = db.Column(db.String(200), nullable=True)
     driver_contact = db.Column(db.String(100), nullable=True)
-    driver_license = db.Column(db.String(100), nullable=True)
     capacity = db.Column(db.String(100), nullable=True)  # weight or volume capacity
     status = db.Column(db.String(50), default='available')  # available, assigned, maintenance, out_of_service
     current_location = db.Column(db.String(200), nullable=True)
