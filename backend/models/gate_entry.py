@@ -12,8 +12,8 @@ class GateUser(db.Model):
     name = db.Column(db.String(200), nullable=False)
     phone = db.Column(db.String(20), unique=True, nullable=False, index=True)
     photo = db.Column(db.Text, nullable=True)  # Base64 encoded photo
-    face_encoding = db.Column(LONGTEXT, nullable=True)  # Serialized face encodings (JSON array) - LONGTEXT in DB for 7 encodings (~292KB)
-    status = db.Column(db.String(50), default='active')  # active, inactive, blocked
+    face_encoding = db.Column(LONGTEXT, nullable=True) 
+    status = db.Column(db.String(50), default='active') 
     registered_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_entry = db.Column(db.DateTime, nullable=True)
     last_exit = db.Column(db.DateTime, nullable=True)
