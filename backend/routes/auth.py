@@ -215,36 +215,22 @@ def delete_user(user_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-import os
-from threading import Thread
-from flask import current_app, request, jsonify
-from mailersend import emails
-
-def send_mailersend_email(from_email, to_email, subject, text_content, html_content=None):
-    """Send email via MailerSend API."""
+def send_mailersend_email(from_email, to_email, subject, html_content, text_content=None):
+    """Send email using MailerSend API."""
     try:
-        client = emails.Client(api_key=os.getenv('MAILERSEND_API_KEY'))
+        client = MailerSendClient(api_key=current_app.config.get("MAILERSEND_API_KEY"))
+        email = (EmailBuilder()
+                 .from_email(from_email, "ERP Support")
+                 .to_many([{"email": to_email}])
+                 .subject(subject)
+                 .html(html_content)
+                 .text(text_content or html_content)
+                 .build())
 
-        response = client.send(
-            sender=from_email,
-            recipients=[to_email],
-            subject=subject,
-            html=html_content,
-            text=text_content
-        )
-
-        print(f"✅ Email sent to {to_email}, response: {response}")
-        return True
+        response = client.emails.send(email)
+        print(f"✅ MailerSend response: {response.status_code} {response.body}")
     except Exception as e:
         print(f"❌ Failed to send MailerSend email: {e}")
-        return False
-
-def send_email_async(app, to_email, subject, text_content, html_content=None):
-    """Send email in background thread."""
-    with app.app_context():
-        from_email = current_app.config.get('MAILERSEND_FROM_EMAIL')
-        send_mailersend_email(from_email, to_email, subject, text_content, html_content)
-
 
 @auth_bp.route('/auth/forgot-password', methods=['POST'])
 def forgot_password():
@@ -252,7 +238,6 @@ def forgot_password():
     try:
         data = request.get_json() or {}
         email = data.get('email')
-
         if not email:
             return jsonify({'error': 'Email is required'}), 400
 
@@ -267,7 +252,6 @@ def forgot_password():
         reset_url = f"{frontend_base_url}/reset-password?token={reset_token_obj.token}"
 
         subject = "Password Reset Request"
-        text_content = f"Hello, click this link to reset your password: {reset_url}"
         user_name = getattr(user, 'name', None) or getattr(user, 'username', None) or "User"
         html_content = f"""
             <p>Hello {user_name},</p>
@@ -275,14 +259,15 @@ def forgot_password():
             <p><a href="{reset_url}">Click here to reset your password</a></p>
             <p>If you did not request this, please ignore this email.</p>
         """
+        text_content = f"Hello {user_name},\nYou requested to reset your password. Visit this link to reset: {reset_url}"
 
-        # Send in background
-        Thread(target=send_email_async, args=(
-            current_app._get_current_object(),
+        # Send email in background thread
+        Thread(target=send_mailersend_email, args=(
+            current_app.config.get("MAILERSEND_FROM_EMAIL"),
             user.email,
             subject,
-            text_content,
-            html_content
+            html_content,
+            text_content
         )).start()
 
         return jsonify({
