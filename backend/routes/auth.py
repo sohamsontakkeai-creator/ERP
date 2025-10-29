@@ -8,9 +8,8 @@ from models.user import User, UserStatus, db
 from models.password_reset_token import PasswordResetToken
 from werkzeug.security import check_password_hash, generate_password_hash
 import threading
+from mailersend import emails
 from threading import Thread
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
 import os 
 
 auth_bp = Blueprint('auth', __name__)
