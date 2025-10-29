@@ -5,16 +5,15 @@ def send_mailersend_email(from_email, to_email, subject, html_content, text_cont
     try:
         client = MailerSendClient(api_key=os.environ.get('MAILERSEND_API_KEY'))
 
-        email = (EmailBuilder()
-                 .from_email(from_email, "ERP Support")  # Sender name optional
-                 .to_many([{"email": to_email}])
-                 .subject(subject)
-                 .html(html_content)
-                 .text(text_content or html_content)
-                 .build())
+        email = EmailBuilder()
+        email.set_from(from_email)
+        email.set_to(to_email)
+        email.set_subject(subject)
+        email.set_html(html_content)
+        email.set_text(text_content or html_content)
 
-        response = client.emails.send(email)
-        print(f"✅ Email sent to {to_email}, response: {response.status_code} {response.body}")
+        response = client.send(email)
+        print(f"✅ Email sent to {to_email}, response: {response}")
         return True
     except Exception as e:
         print(f"❌ Failed to send MailerSend email: {e}")
