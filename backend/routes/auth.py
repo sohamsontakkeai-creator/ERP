@@ -6,6 +6,7 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_mail import Message
 from models.user import User, UserStatus, db
 from models.password_reset_token import PasswordResetToken
+from your_app.models import User, PasswordResetToken
 from werkzeug.security import check_password_hash, generate_password_hash
 import threading
 from threading import Thread
@@ -217,49 +218,54 @@ def delete_user(user_id):
         return jsonify({'error': str(e)}), 500
 
 
+
+def send_email_async(app, to_email, subject, content):
+    """Send email in a separate thread with Flask app context."""
+    with app.app_context():
+        try:
+            message = Mail(
+                from_email=current_app.config.get('MAIL_DEFAULT_SENDER'),
+                to_emails=to_email,
+                subject=subject,
+                plain_text_content=content
+            )
+            sg = SendGridAPIClient(current_app.config.get('SENDGRID_API_KEY'))
+            response = sg.send(message)
+            print(f"✅ Email sent to {to_email}, status_code: {response.status_code}")
+        except Exception as e:
+            print(f"❌ Failed to send email: {e}")
+
 @auth_bp.route('/auth/forgot-password', methods=['POST'])
 def forgot_password():
-    try:
-        data = request.get_json() or {}
-        if 'email' not in data:
-            return jsonify({'error': 'Email is required'}), 400
+    data = request.get_json() or {}
+    if 'email' not in data:
+        return jsonify({'error': 'Email is required'}), 400
 
-        user = User.query.filter_by(email=data['email']).first()
-        if not user:
-            return jsonify({'error': 'No account found with this email'}), 404
+    user = User.query.filter_by(email=data['email']).first()
+    if not user:
+        return jsonify({'error': 'No account found with this email'}), 404
 
-        reset_token_obj = PasswordResetToken.create_token(user.id)
-        frontend_base_url = current_app.config.get('FRONTEND_BASE_URL', 'http://localhost:5173')
-        reset_url = f"{frontend_base_url}/reset-password?token={reset_token_obj.token}"
+    # Create password reset token
+    reset_token_obj = PasswordResetToken.create_token(user.id)
 
-        def send_email(app, email, reset_url):
-            # Push app context inside the thread
-            with app.app_context():
-                message = Mail(
-                    from_email=current_app.config.get('MAIL_DEFAULT_SENDER'),
-                    to_emails=email,
-                    subject='Password Reset Request',
-                    plain_text_content=f'Click the link to reset your password: {reset_url}'
-                )
-                try:
-                    sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
-                    response = sg.send(message)
-                    print(f"✅ Reset email sent to {email}, Status code: {response.status_code}")
-                except Exception as e:
-                    print(f"❌ Failed to send email: {e}")
+    frontend_base_url = current_app.config.get('FRONTEND_BASE_URL', 'http://localhost:5173')
+    reset_url = f"{frontend_base_url}/reset-password?token={reset_token_obj.token}"
 
-        # Pass the current app to the thread
-        Thread(target=send_email, args=(current_app._get_current_object(), user.email, reset_url)).start()
+    # Email content
+    subject = "Password Reset Request"
+    content = f"Click the link to reset your password: {reset_url}"
 
-        return jsonify({
-            'message': 'A reset link has been sent to your email address.',
-            'reset_token': reset_token_obj.token,
-            'reset_url': reset_url
-        }), 200
+    # Send email in background thread
+    Thread(
+        target=send_email_async,
+        args=(current_app._get_current_object(), user.email, subject, content)
+    ).start()
 
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+    return jsonify({
+        'message': 'A reset link has been sent to your email address.',
+        'reset_token': reset_token_obj.token,
+        'reset_url': reset_url
+    }), 200
 
         
 @auth_bp.route('/auth/reset-password', methods=['POST'])
