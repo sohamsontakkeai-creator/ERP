@@ -8,7 +8,7 @@ from models.user import User, UserStatus, db
 from models.password_reset_token import PasswordResetToken
 from werkzeug.security import check_password_hash, generate_password_hash
 import threading
-from mailersend import emails
+import mailersend
 from threading import Thread
 import os 
 
@@ -216,55 +216,71 @@ def delete_user(user_id):
         return jsonify({'error': str(e)}), 500
 
 
-def send_email_async(app, to_email, subject, content):
-    """Send email using MailerSend in background thread."""
-    with app.app_context():
-        try:
-            mailer = emails.NewEmail(current_app.config['MAILERSEND_API_KEY'])
-            
-            mail_body = {
-                "from": {
-                    "email": current_app.config['MAILERSEND_FROM_EMAIL'],
-                    "name": "Alankar Engineering"
-                },
-                "to": [{"email": to_email}],
-                "subject": subject,
-                "text": content,
-                "html": f"<p>{content}</p>"
-            }
+def send_mailersend_email(from_email, to_email, subject, text_content, html_content):
+    """Send email using MailerSend API."""
+    try:
+        mailer = mailersend.NewApiClient(api_key=os.getenv("MAILERSEND_API_KEY"))
 
-            mailer.send(mail_body)
-            print(f"✅ Email sent to {to_email}")
-        except Exception as e:
-            print(f"❌ Failed to send email: {e}")
+        mailer.send(
+            from_email,
+            [to_email],
+            subject,
+            html_content,
+            text_content
+        )
+
+        print(f"✅ MailerSend email sent to {to_email}")
+
+    except Exception as e:
+        print(f"❌ Failed to send MailerSend email: {e}")
 
 @auth_bp.route('/auth/forgot-password', methods=['POST'])
 def forgot_password():
-    data = request.get_json() or {}
-    if 'email' not in data:
-        return jsonify({'error': 'Email is required'}), 400
+    """Handle forgot password and send reset link."""
+    try:
+        data = request.get_json() or {}
+        email = data.get('email')
 
-    user = User.query.filter_by(email=data['email']).first()
-    if not user:
-        return jsonify({'error': 'No account found with this email'}), 404
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
 
-    # Create password reset token
-    reset_token_obj = PasswordResetToken.create_token(user.id)
-    frontend_base_url = current_app.config.get('FRONTEND_BASE_URL', 'http://localhost:5173')
-    reset_url = f"{frontend_base_url}/reset-password?token={reset_token_obj.token}"
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return jsonify({'error': 'No account found with this email'}), 404
 
-    # Email content
-    subject = "Password Reset Request"
-    content = f"Click the link to reset your password: {reset_url}"
+        # Generate password reset token
+        reset_token_obj = PasswordResetToken.create_token(user.id)
 
-    # Send asynchronously
-    Thread(target=send_email_async, args=(current_app._get_current_object(), user.email, subject, content)).start()
+        frontend_base_url = current_app.config.get('FRONTEND_BASE_URL', 'http://localhost:5173')
+        reset_url = f"{frontend_base_url}/reset-password?token={reset_token_obj.token}"
 
-    return jsonify({
-        'message': 'A reset link has been sent to your email address.',
-        'reset_token': reset_token_obj.token,
-        'reset_url': reset_url
-    }), 200
+        subject = "Password Reset Request"
+        text_content = f"Click this link to reset your password: {reset_url}"
+        html_content = f"""
+            <p>Hello {user.name},</p>
+            <p>You requested to reset your password.</p>
+            <p><a href="{reset_url}">Click here to reset your password</a></p>
+            <p>If you did not request this, please ignore this email.</p>
+        """
+
+        # Send in background
+        Thread(target=send_mailersend_email, args=(
+            os.getenv("MAILERSEND_FROM_EMAIL"),
+            user.email,
+            subject,
+            text_content,
+            html_content
+        )).start()
+
+        return jsonify({
+            'message': 'A reset link has been sent to your email address.',
+            'reset_token': reset_token_obj.token,
+            'reset_url': reset_url
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
         
 @auth_bp.route('/auth/reset-password', methods=['POST'])
