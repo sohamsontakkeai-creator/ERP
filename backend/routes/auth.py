@@ -215,24 +215,28 @@ def delete_user(user_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+def send_email_async(app, to_email, subject, content):
+    with app.app_context():
+        try:
+            mailer = emails.NewEmail(api_key=current_app.config.get('MAILERSEND_API_KEY'))
 
-def send_mailersend_email(from_email, to_email, subject, text_content, html_content):
-    """Send email using MailerSend API."""
-    try:
-        mailer = mailersend.NewApiClient(api_key=os.getenv("MAILERSEND_API_KEY"))
+            mail_from = {
+                "name": "ERP Support",
+                "email": current_app.config.get('MAILERSEND_FROM_EMAIL')
+            }
 
-        mailer.send(
-            from_email,
-            [to_email],
-            subject,
-            html_content,
-            text_content
-        )
+            recipients = [{"email": to_email}]
 
-        print(f"✅ MailerSend email sent to {to_email}")
+            mailer.set_mail_from(mail_from)
+            mailer.set_mail_to(recipients)
+            mailer.set_subject(subject)
+            mailer.set_html_content(content)
+            mailer.set_plaintext_content(content)
 
-    except Exception as e:
-        print(f"❌ Failed to send MailerSend email: {e}")
+            response = mailer.send()
+            print(f"✅ Email sent to {to_email}. Response: {response}")
+        except Exception as e:
+            print(f"❌ Failed to send MailerSend email: {e}")
 
 @auth_bp.route('/auth/forgot-password', methods=['POST'])
 def forgot_password():
@@ -333,5 +337,3 @@ def get_departments():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-
