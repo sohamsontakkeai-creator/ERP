@@ -232,21 +232,24 @@ def forgot_password():
         frontend_base_url = current_app.config.get('FRONTEND_BASE_URL', 'http://localhost:5173')
         reset_url = f"{frontend_base_url}/reset-password?token={reset_token_obj.token}"
 
-        def send_email(email, reset_url):
-            message = Mail(
-                from_email=current_app.config.get('MAIL_DEFAULT_SENDER'),
-                to_emails=email,
-                subject='Password Reset Request',
-                plain_text_content=f'Click the link to reset your password: {reset_url}'
-            )
-            try:
-                sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
-                response = sg.send(message)
-                print(f"✅ Reset email sent to {email}, Status code: {response.status_code}")
-            except Exception as e:
-                print(f"❌ Failed to send email: {e}")
+        def send_email(app, email, reset_url):
+            # Push app context inside the thread
+            with app.app_context():
+                message = Mail(
+                    from_email=current_app.config.get('MAIL_DEFAULT_SENDER'),
+                    to_emails=email,
+                    subject='Password Reset Request',
+                    plain_text_content=f'Click the link to reset your password: {reset_url}'
+                )
+                try:
+                    sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
+                    response = sg.send(message)
+                    print(f"✅ Reset email sent to {email}, Status code: {response.status_code}")
+                except Exception as e:
+                    print(f"❌ Failed to send email: {e}")
 
-        Thread(target=send_email, args=(user.email, reset_url)).start()
+        # Pass the current app to the thread
+        Thread(target=send_email, args=(current_app._get_current_object(), user.email, reset_url)).start()
 
         return jsonify({
             'message': 'A reset link has been sent to your email address.',
@@ -257,6 +260,7 @@ def forgot_password():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
+
         
 @auth_bp.route('/auth/reset-password', methods=['POST'])
 def reset_password():
