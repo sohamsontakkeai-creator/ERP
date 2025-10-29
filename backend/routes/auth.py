@@ -217,20 +217,25 @@ def delete_user(user_id):
         return jsonify({'error': str(e)}), 500
 
 
-
 def send_email_async(app, to_email, subject, content):
-    """Send email in a separate thread with Flask app context."""
+    """Send email using MailerSend in background thread."""
     with app.app_context():
         try:
-            message = Mail(
-                from_email=current_app.config.get('MAIL_DEFAULT_SENDER'),
-                to_emails=to_email,
-                subject=subject,
-                plain_text_content=content
-            )
-            sg = SendGridAPIClient(current_app.config.get('SENDGRID_API_KEY'))
-            response = sg.send(message)
-            print(f"✅ Email sent to {to_email}, status_code: {response.status_code}")
+            mailer = emails.NewEmail(current_app.config['MAILERSEND_API_KEY'])
+            
+            mail_body = {
+                "from": {
+                    "email": current_app.config['MAILERSEND_FROM_EMAIL'],
+                    "name": "Alankar Engineering"
+                },
+                "to": [{"email": to_email}],
+                "subject": subject,
+                "text": content,
+                "html": f"<p>{content}</p>"
+            }
+
+            mailer.send(mail_body)
+            print(f"✅ Email sent to {to_email}")
         except Exception as e:
             print(f"❌ Failed to send email: {e}")
 
@@ -246,7 +251,6 @@ def forgot_password():
 
     # Create password reset token
     reset_token_obj = PasswordResetToken.create_token(user.id)
-
     frontend_base_url = current_app.config.get('FRONTEND_BASE_URL', 'http://localhost:5173')
     reset_url = f"{frontend_base_url}/reset-password?token={reset_token_obj.token}"
 
@@ -254,11 +258,8 @@ def forgot_password():
     subject = "Password Reset Request"
     content = f"Click the link to reset your password: {reset_url}"
 
-    # Send email in background thread
-    Thread(
-        target=send_email_async,
-        args=(current_app._get_current_object(), user.email, subject, content)
-    ).start()
+    # Send asynchronously
+    Thread(target=send_email_async, args=(current_app._get_current_object(), user.email, subject, content)).start()
 
     return jsonify({
         'message': 'A reset link has been sent to your email address.',
