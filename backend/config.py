@@ -35,11 +35,9 @@ class Config:
     # CORS Configuration
     CORS_ORIGINS = os.getenv('CORS_ORIGINS', '*')
 
-    # Email Configuration (Flask-Mail)
-    # Email Configuration (SendGrid)
-    SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
-    MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'no-reply@example.com')
-
+    MAILERSEND_API_KEY = os.getenv('MAILERSEND_API_KEY')
+    MAILERSEND_FROM_EMAIL = os.getenv('MAILERSEND_FROM_EMAIL')
+    
     # Google OAuth Configuration
     GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
