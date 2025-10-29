@@ -9,6 +9,8 @@ from models.password_reset_token import PasswordResetToken
 from werkzeug.security import check_password_hash, generate_password_hash
 import threading
 from threading import Thread
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -228,23 +230,27 @@ def forgot_password():
         frontend_base_url = current_app.config.get('FRONTEND_BASE_URL', 'http://localhost:5173')
         reset_url = f"{frontend_base_url}/reset-password?token={reset_token_obj.token}"
 
-        # Send email in a background thread
-        def send_email(app, user_email, reset_url):
-            with app.app_context():
-                mail = current_app.extensions['mail']  # Access Mail instance
-                msg = Message(
-                    'Password Reset Request',
-                    sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                    recipients=[user_email]
-                )
-                msg.body = f'Click the link to reset your password: {reset_url}'
-                try:
-                    mail.send(msg)
-                    print(f"✅ Reset email sent to {user_email}")
-                except Exception as e:
-                    print(f"❌ Failed to send email: {e}")
+        # Send email using SendGrid in a background thread
+        def send_email(user_email, reset_url):
+            message = Mail(
+                from_email=current_app.config['MAIL_DEFAULT_SENDER'],
+                to_emails=user_email,
+                subject='Password Reset Request',
+                html_content=f"""
+                    <p>Hi,</p>
+                    <p>Click the link below to reset your password:</p>
+                    <a href="{reset_url}">{reset_url}</a>
+                    <p>If you did not request this, please ignore this email.</p>
+                """
+            )
+            try:
+                sg = SendGridAPIClient(current_app.config['SENDGRID_API_KEY'])
+                response = sg.send(message)
+                print(f"✅ Reset email sent to {user_email}. Status code: {response.status_code}")
+            except Exception as e:
+                print(f"❌ Failed to send email: {e}")
 
-        Thread(target=send_email, args=(current_app._get_current_object(), user.email, reset_url)).start()
+        Thread(target=send_email, args=(user.email, reset_url)).start()
 
         return jsonify({
             'message': 'A reset link has been sent to your email address.',
@@ -255,7 +261,7 @@ def forgot_password():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
+        
 @auth_bp.route('/auth/reset-password', methods=['POST'])
 def reset_password():
     """Reset user password using token"""
