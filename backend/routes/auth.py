@@ -256,12 +256,15 @@ def forgot_password():
 
         subject = "Password Reset Request"
         text_content = f"Click this link to reset your password: {reset_url}"
+        user_name = getattr(user, 'name', None) or getattr(user, 'username', None) or "User"
+
         html_content = f"""
-            <p>Hello {user.name},</p>
+            <p>Hello {user_name},</p>
             <p>You requested to reset your password.</p>
             <p><a href="{reset_url}">Click here to reset your password</a></p>
             <p>If you did not request this, please ignore this email.</p>
         """
+
 
         # Send in background
         Thread(target=send_mailersend_email, args=(
