@@ -215,28 +215,36 @@ def delete_user(user_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-def send_email_async(app, to_email, subject, content):
+import os
+from threading import Thread
+from flask import current_app, request, jsonify
+from mailersend import emails
+
+def send_mailersend_email(from_email, to_email, subject, text_content, html_content=None):
+    """Send email via MailerSend API."""
+    try:
+        client = emails.Client(api_key=os.getenv('MAILERSEND_API_KEY'))
+
+        response = client.send(
+            sender=from_email,
+            recipients=[to_email],
+            subject=subject,
+            html=html_content,
+            text=text_content
+        )
+
+        print(f"✅ Email sent to {to_email}, response: {response}")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to send MailerSend email: {e}")
+        return False
+
+def send_email_async(app, to_email, subject, text_content, html_content=None):
+    """Send email in background thread."""
     with app.app_context():
-        try:
-            mailer = emails.NewEmail(api_key=current_app.config.get('MAILERSEND_API_KEY'))
+        from_email = current_app.config.get('MAILERSEND_FROM_EMAIL')
+        send_mailersend_email(from_email, to_email, subject, text_content, html_content)
 
-            mail_from = {
-                "name": "ERP Support",
-                "email": current_app.config.get('MAILERSEND_FROM_EMAIL')
-            }
-
-            recipients = [{"email": to_email}]
-
-            mailer.set_mail_from(mail_from)
-            mailer.set_mail_to(recipients)
-            mailer.set_subject(subject)
-            mailer.set_html_content(content)
-            mailer.set_plaintext_content(content)
-
-            response = mailer.send()
-            print(f"✅ Email sent to {to_email}. Response: {response}")
-        except Exception as e:
-            print(f"❌ Failed to send MailerSend email: {e}")
 
 @auth_bp.route('/auth/forgot-password', methods=['POST'])
 def forgot_password():
@@ -259,9 +267,8 @@ def forgot_password():
         reset_url = f"{frontend_base_url}/reset-password?token={reset_token_obj.token}"
 
         subject = "Password Reset Request"
-        text_content = f"Click this link to reset your password: {reset_url}"
+        text_content = f"Hello, click this link to reset your password: {reset_url}"
         user_name = getattr(user, 'name', None) or getattr(user, 'username', None) or "User"
-
         html_content = f"""
             <p>Hello {user_name},</p>
             <p>You requested to reset your password.</p>
@@ -269,10 +276,9 @@ def forgot_password():
             <p>If you did not request this, please ignore this email.</p>
         """
 
-
         # Send in background
-        Thread(target=send_mailersend_email, args=(
-            os.getenv("MAILERSEND_FROM_EMAIL"),
+        Thread(target=send_email_async, args=(
+            current_app._get_current_object(),
             user.email,
             subject,
             text_content,
@@ -288,7 +294,6 @@ def forgot_password():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
         
 @auth_bp.route('/auth/reset-password', methods=['POST'])
 def reset_password():
