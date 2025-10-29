@@ -11,6 +11,7 @@ import threading
 from threading import Thread
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
+import os 
 
 auth_bp = Blueprint('auth', __name__)
 
