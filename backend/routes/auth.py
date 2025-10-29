@@ -11,6 +11,7 @@ import threading
 import mailersend
 from threading import Thread
 import os 
+from utils.mail import send_mailersend_email
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -215,26 +216,24 @@ def delete_user(user_id):
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
-def send_mailersend_email(from_email, to_email, subject, html_content, text_content=None):
-    """Send email using MailerSend API."""
-    try:
-        client = MailerSendClient(api_key=current_app.config.get("MAILERSEND_API_KEY"))
-        email = (EmailBuilder()
-                 .from_email(from_email, "ERP Support")
-                 .to_many([{"email": to_email}])
-                 .subject(subject)
-                 .html(html_content)
-                 .text(text_content or html_content)
-                 .build())
-
-        response = client.emails.send(email)
-        print(f"✅ MailerSend response: {response.status_code} {response.body}")
-    except Exception as e:
-        print(f"❌ Failed to send MailerSend email: {e}")
+def send_email_async(app, to_email, subject, html_content, text_content=None):
+    """
+    Send email in a separate thread with Flask app context.
+    """
+    with app.app_context():
+        send_mailersend_email(
+            current_app.config.get('MAILERSEND_FROM_EMAIL'),
+            to_email,
+            subject,
+            html_content,
+            text_content
+        )
 
 @auth_bp.route('/auth/forgot-password', methods=['POST'])
 def forgot_password():
-    """Handle forgot password and send reset link."""
+    """
+    Handle forgot password requests and send reset link via MailerSend.
+    """
     try:
         data = request.get_json() or {}
         email = data.get('email')
@@ -245,30 +244,28 @@ def forgot_password():
         if not user:
             return jsonify({'error': 'No account found with this email'}), 404
 
-        # Generate password reset token
+        # Create password reset token
         reset_token_obj = PasswordResetToken.create_token(user.id)
 
         frontend_base_url = current_app.config.get('FRONTEND_BASE_URL', 'http://localhost:5173')
         reset_url = f"{frontend_base_url}/reset-password?token={reset_token_obj.token}"
 
-        subject = "Password Reset Request"
+        # Email content
         user_name = getattr(user, 'name', None) or getattr(user, 'username', None) or "User"
+        subject = "Password Reset Request"
+        text_content = f"Hello {user_name}, click this link to reset your password: {reset_url}"
         html_content = f"""
             <p>Hello {user_name},</p>
             <p>You requested to reset your password.</p>
             <p><a href="{reset_url}">Click here to reset your password</a></p>
             <p>If you did not request this, please ignore this email.</p>
         """
-        text_content = f"Hello {user_name},\nYou requested to reset your password. Visit this link to reset: {reset_url}"
 
-        # Send email in background thread
-        Thread(target=send_mailersend_email, args=(
-            current_app.config.get("MAILERSEND_FROM_EMAIL"),
-            user.email,
-            subject,
-            html_content,
-            text_content
-        )).start()
+        # Send email asynchronously
+        Thread(
+            target=send_email_async,
+            args=(current_app._get_current_object(), user.email, subject, html_content, text_content)
+        ).start()
 
         return jsonify({
             'message': 'A reset link has been sent to your email address.',
