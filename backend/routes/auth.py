@@ -226,31 +226,25 @@ def forgot_password():
         if not user:
             return jsonify({'error': 'No account found with this email'}), 404
 
+        # Create password reset token
         reset_token_obj = PasswordResetToken.create_token(user.id)
         frontend_base_url = current_app.config.get('FRONTEND_BASE_URL', 'http://localhost:5173')
         reset_url = f"{frontend_base_url}/reset-password?token={reset_token_obj.token}"
 
-        # Send email using SendGrid in a background thread
-        def send_email(user_email, reset_url):
-            message = Mail(
-                from_email=current_app.config['MAIL_DEFAULT_SENDER'],
-                to_emails=user_email,
-                subject='Password Reset Request',
-                html_content=f"""
-                    <p>Hi,</p>
-                    <p>Click the link below to reset your password:</p>
-                    <a href="{reset_url}">{reset_url}</a>
-                    <p>If you did not request this, please ignore this email.</p>
-                """
-            )
-            try:
-                sg = SendGridAPIClient(current_app.config['SENDGRID_API_KEY'])
-                response = sg.send(message)
-                print(f"✅ Reset email sent to {user_email}. Status code: {response.status_code}")
-            except Exception as e:
-                print(f"❌ Failed to send email: {e}")
+        # Prepare SendGrid email
+        message = Mail(
+            from_email=os.getenv('SENDGRID_DEFAULT_SENDER', 'noreply@yourdomain.com'),
+            to_emails=user.email,
+            subject='Password Reset Request',
+            plain_text_content=f'Click the link to reset your password: {reset_url}'
+        )
 
-        Thread(target=send_email, args=(user.email, reset_url)).start()
+        try:
+            sg = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
+            response = sg.send(message)
+            print(f"✅ Reset email sent to {user.email}, status code: {response.status_code}")
+        except Exception as e:
+            print(f"❌ Failed to send email: {e}")
 
         return jsonify({
             'message': 'A reset link has been sent to your email address.',
