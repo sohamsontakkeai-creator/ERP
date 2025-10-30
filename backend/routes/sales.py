@@ -250,4 +250,122 @@ def verify_gst_number():
         }), 500
 
 
+# ==================== SALES TARGET & DASHBOARD ENDPOINTS ====================
+
+@sales_bp.route('/dashboard', methods=['GET'])
+def get_salesperson_dashboard():
+    """Get sales dashboard for the current salesperson with target tracking"""
+    try:
+        # Get salesperson name from query params or header
+        sales_person = request.args.get('salesPerson')
+        year = request.args.get('year', type=int)
+        month = request.args.get('month', type=int)
+        
+        if not sales_person:
+            return jsonify({'error': 'salesPerson parameter is required'}), 400
+        
+        dashboard = SalesService.get_salesperson_dashboard(sales_person, year, month)
+        return jsonify(dashboard), 200
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@sales_bp.route('/targets', methods=['POST'])
+def set_sales_target():
+    """Set or update sales target for a salesperson (Admin only)"""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['salesPerson', 'year', 'month', 'targetAmount', 'assignedBy']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'{field} is required'}), 400
+        
+        result = SalesService.set_sales_target(
+            sales_person=data['salesPerson'],
+            year=int(data['year']),
+            month=int(data['month']),
+            target_amount=float(data['targetAmount']),
+            assigned_by=data['assignedBy'],
+            notes=data.get('notes')
+        )
+        
+        return jsonify(result), 201
+    
+    except ValueError as ve:
+        return jsonify({'error': str(ve)}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@sales_bp.route('/targets/current', methods=['GET'])
+def get_current_sales_target():
+    """Get current month's sales target for a salesperson"""
+    try:
+        sales_person = request.args.get('salesPerson')
+        
+        if not sales_person:
+            return jsonify({'error': 'salesPerson parameter is required'}), 400
+        
+        target = SalesService.get_sales_target(sales_person)
+        
+        if not target:
+            return jsonify({'message': 'No target set for current month', 'target': None}), 200
+        
+        return jsonify(target), 200
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@sales_bp.route('/targets/all', methods=['GET'])
+def get_all_targets():
+    """Get all sales targets for a salesperson in a specific year"""
+    try:
+        sales_person = request.args.get('salesPerson')
+        year = request.args.get('year', type=int)
+        
+        if not sales_person:
+            return jsonify({'error': 'salesPerson parameter is required'}), 400
+        
+        targets = SalesService.get_all_targets_for_salesperson(sales_person, year)
+        return jsonify({'targets': targets, 'count': len(targets)}), 200
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@sales_bp.route('/performance', methods=['GET'])
+def get_salesperson_performance():
+    """Get performance metrics for a salesperson for a specific month"""
+    try:
+        sales_person = request.args.get('salesPerson')
+        year = request.args.get('year', type=int)
+        month = request.args.get('month', type=int)
+        
+        if not sales_person:
+            return jsonify({'error': 'salesPerson parameter is required'}), 400
+        
+        # Get achieved sales
+        achieved = SalesService.get_achieved_sales(sales_person, year, month)
+        
+        # Get target
+        target = SalesService.get_sales_target(sales_person, year, month)
+        
+        performance = {
+            'salesPerson': sales_person,
+            'year': year,
+            'month': month,
+            'achievedSales': round(achieved, 2),
+            'target': target,
+            'achievedPercentage': round((achieved / float(target['targetAmount']) * 100), 2) if target else 0
+        }
+        
+        return jsonify(performance), 200
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
