@@ -25,12 +25,15 @@ import {
     AlertCircle,
     RefreshCw,
     Truck,
-    Search as SearchIcon
+    Search as SearchIcon,
+    Award,
+    X
 } from 'lucide-react';
 import { API_BASE } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import OrderStatusBar from '@/components/ui/OrderStatusBar';
+import SalesPerformanceDashboard from '@/components/SalesPerformanceDashboard';
 
 const SalesDepartment = () => {
     const navigate = useNavigate();
@@ -66,6 +69,7 @@ const SalesDepartment = () => {
         pendingTransport: 0,
         pendingDispatch: 0
     });
+    const [showPerformanceModal, setShowPerformanceModal] = useState(false);
     const { toast } = useToast();
 
     // Form states
@@ -832,15 +836,26 @@ const SalesDepartment = () => {
             </div>
           </div>
 
-          {/* User Info Panel */}
-          <div className="bg-gradient-to-r from-green-50 to-indigo-50 border-2 border-green-200 px-4 py-4 sm:px-6 rounded-lg shadow-sm w-full sm:w-auto">
-            <div className="flex items-center space-x-3">
-              <Users className="w-5 h-5 text-blue-600" />
-              <div>
-                <p className="text-gray-600 text-xs font-medium">Sales Team</p>
-                <p className="text-green-600 text-xs font-medium">Sales Management</p>
+          {/* User Info Panel & Performance Button */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="bg-gradient-to-r from-green-50 to-indigo-50 border-2 border-green-200 px-4 py-4 sm:px-6 rounded-lg shadow-sm w-full sm:w-auto">
+              <div className="flex items-center space-x-3">
+                <Users className="w-5 h-5 text-blue-600" />
+                <div>
+                  <p className="text-gray-600 text-xs font-medium">Sales Team</p>
+                  <p className="text-green-600 text-xs font-medium">Sales Management</p>
+                </div>
               </div>
             </div>
+
+            {/* My Performance Button */}
+            <Button
+              onClick={() => setShowPerformanceModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 w-full sm:w-auto"
+            >
+              <Award className="w-4 h-4" />
+              <span>My Performance</span>
+            </Button>
           </div>
 
         </div>
@@ -2605,6 +2620,26 @@ const SalesDepartment = () => {
                             </div>
                         </div>
                     )}
+                </DialogContent>
+            </Dialog>
+            {/* My Performance Modal Dialog */}
+            <Dialog open={showPerformanceModal} onOpenChange={setShowPerformanceModal}>
+                <DialogContent className="max-w-5xl max-h-[90vh] bg-white overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="text-gray-800">My Sales Performance</DialogTitle>
+                        <button
+                            onClick={() => setShowPerformanceModal(false)}
+                            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </DialogHeader>
+                    <div className="mt-4">
+                        <SalesPerformanceDashboard 
+                            salesPerson={user?.username} 
+                            isAdmin={false} 
+                        />
+                    </div>
                 </DialogContent>
             </Dialog>
 
