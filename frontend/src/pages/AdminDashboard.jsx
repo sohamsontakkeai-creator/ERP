@@ -20,6 +20,8 @@ import DispatchDashboard from '@/components/DispatchDepartment';
 import WatchmanDashboard from '@/components/WatchmanDepartment';
 import TransportDashboard from '@/components/TransportDepartment';
 import HRDepartment from '@/components/HRDepartment';
+import SetSalesTarget from '@/components/SetSalesTarget';
+import SalesPerformanceDashboard from '@/components/SalesPerformanceDashboard';
 
 const UserManagement = () => {
   const { getAllUsers, updateUserDepartment, deleteUser } = useAuth();
@@ -772,7 +774,24 @@ const UserApproval = () => {
               <TabsTrigger value="watchman" className="text-gray-700 font-medium data-[state=active]:bg-blue-600 data-[state=active]:text-white whitespace-nowrap px-4 py-2 min-w-[5rem] text-sm">Security</TabsTrigger>
             </TabsList>
           </div>
-          <TabsContent value="overview"><UserManagement /></TabsContent>
+          <TabsContent value="overview">
+            <Tabs defaultValue="users" className="w-full">
+              <TabsList className="grid w-full grid-cols-3 mb-6">
+                <TabsTrigger value="users">User Management</TabsTrigger>
+                <TabsTrigger value="sales-targets">Set Sales Target</TabsTrigger>
+                <TabsTrigger value="performance">Sales Performance</TabsTrigger>
+              </TabsList>
+              <TabsContent value="users">
+                <UserManagement />
+              </TabsContent>
+              <TabsContent value="sales-targets">
+                <SetSalesTarget />
+              </TabsContent>
+              <TabsContent value="performance">
+                <SalesPerformanceDashboard isAdmin={true} />
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
           <TabsContent value="approvals"><UserApproval /></TabsContent>
           <TabsContent value="production"><ProductionDashboard /></TabsContent>
           <TabsContent value="purchase"><PurchaseDashboard /></TabsContent>
