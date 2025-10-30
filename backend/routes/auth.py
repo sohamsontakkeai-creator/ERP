@@ -164,6 +164,33 @@ def get_all_users():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@auth_bp.route('/auth/users-by-department', methods=['GET'])
+def get_users_by_department():
+    """Get users filtered by department"""
+    try:
+        department = request.args.get('department')
+        status = request.args.get('status')
+        
+        query = User.query
+        
+        if department:
+            query = query.filter_by(department=department)
+        
+        if status:
+            query = query.filter_by(status=status)
+        else:
+            # By default, only return approved users
+            query = query.filter_by(status=UserStatus.APPROVED)
+        
+        users = query.all()
+        return jsonify({
+            'users': [user.to_dict() for user in users]
+        }), 200
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 @auth_bp.route('/auth/users/<int:user_id>/department', methods=['PUT'])
 def update_user_department(user_id):
     """Update user's department (admin only)"""
