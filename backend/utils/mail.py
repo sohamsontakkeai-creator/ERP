@@ -3,26 +3,19 @@ from mailersend import emails
 
 def send_mailersend_email(from_email, to_email, subject, html_content, text_content=None):
     try:
-        # Initialize the MailerSend client
         mailer = emails.NewEmail(os.environ.get('MAILERSEND_API_KEY'))
 
-        # ✅ Create the message as a dictionary
-        mail_body = {
-            "from": {"email": from_email, "name": "ERP Support"},
-            "to": [{"email": to_email}],
-            "subject": subject,
-            "html": html_content,
-            "text": text_content or html_content
-        }
+        # ✅ Step 1: create an empty message first
+        mail_body = mailer.new_message()
 
-        # ✅ Use setter methods to populate data properly
-        mailer.set_mail_from(mail_body, mail_body["from"])
-        mailer.set_mail_to(mail_body, mail_body["to"])
-        mailer.set_subject(mail_body, mail_body["subject"])
-        mailer.set_html_content(mail_body, mail_body["html"])
-        mailer.set_plaintext_content(mail_body, mail_body["text"])
+        # ✅ Step 2: set all fields using proper function signatures
+        mailer.set_mail_from(mail_body, {"email": from_email, "name": "ERP Support"})
+        mailer.set_mail_to(mail_body, [{"email": to_email}])
+        mailer.set_subject(mail_body, subject)
+        mailer.set_html_content(mail_body, html_content)
+        mailer.set_plaintext_content(mail_body, text_content or html_content)
 
-        # ✅ Send the email
+        # ✅ Step 3: send the message
         response = mailer.send(mail_body)
 
         print(f"✅ Email sent successfully to {to_email}, response: {response}")
