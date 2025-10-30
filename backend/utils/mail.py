@@ -5,17 +5,16 @@ def send_mailersend_email(from_email, to_email, subject, html_content, text_cont
     try:
         mailer = emails.NewEmail(os.environ.get('MAILERSEND_API_KEY'))
 
-        # ✅ Step 1: create an empty message first
-        mail_body = mailer.new_message()
+        # ✅ Build message manually as a dict
+        mail_body = {
+            "from": {"email": from_email, "name": "ERP Support"},
+            "to": [{"email": to_email}],
+            "subject": subject,
+            "html": html_content,
+            "text": text_content or html_content
+        }
 
-        # ✅ Step 2: set all fields using proper function signatures
-        mailer.set_mail_from(mail_body, {"email": from_email, "name": "ERP Support"})
-        mailer.set_mail_to(mail_body, [{"email": to_email}])
-        mailer.set_subject(mail_body, subject)
-        mailer.set_html_content(mail_body, html_content)
-        mailer.set_plaintext_content(mail_body, text_content or html_content)
-
-        # ✅ Step 3: send the message
+        # ✅ Send the email directly
         response = mailer.send(mail_body)
 
         print(f"✅ Email sent successfully to {to_email}, response: {response}")
