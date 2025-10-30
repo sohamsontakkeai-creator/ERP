@@ -784,15 +784,21 @@ class SalesService:
     
     @staticmethod
     def get_achieved_sales(sales_person, year, month):
-        """Calculate total achieved sales for a specific month"""
+        """Calculate total achieved sales for a specific month (excluding transport costs)"""
         try:
             # Get first and last day of the month
             first_day = datetime(year, month, 1)
             last_day = datetime(year, month, calendar.monthrange(year, month)[1], 23, 59, 59)
             
-            # Sum final_amount of all orders created in this month by the salesperson
+            # Sum only product sales (total_amount - transport_cost - discount_amount)
+            # This excludes transport costs from the sales target calculation
             achieved = db.session.query(
-                db.func.coalesce(db.func.sum(SalesOrder.final_amount), 0)
+                db.func.coalesce(
+                    db.func.sum(
+                        SalesOrder.total_amount - SalesOrder.transport_cost - SalesOrder.discount_amount
+                    ), 
+                    0
+                )
             ).filter(
                 SalesOrder.sales_person == sales_person,
                 SalesOrder.created_at >= first_day,
