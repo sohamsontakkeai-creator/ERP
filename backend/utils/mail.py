@@ -1,4 +1,5 @@
 from mailersend import emails
+import os
 
 def send_mailersend_email(from_email, to_email, subject, html_content, text_content=None):
     try:
