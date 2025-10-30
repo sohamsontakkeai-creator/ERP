@@ -6,24 +6,21 @@ def send_mailersend_email(from_email, to_email, subject, html_content, text_cont
         # Initialize client
         mailer = emails.NewEmail(os.environ.get('MAILERSEND_API_KEY'))
 
-        # Set up the "from" field
-        mailer.set_mail_from(from_email)
+        # Create message object
+        mail_body = {}
 
-        # Set up the "to" field
-        mailer.set_mail_to([to_email])
+        # Set required fields
+        mailer.set_mail_from(mail_body, from_email)
+        mailer.set_mail_to(mail_body, [to_email])
+        mailer.set_subject(mail_body, subject)
+        mailer.set_html_content(mail_body, html_content)
+        mailer.set_plaintext_content(mail_body, text_content or html_content)
 
-        # Set the subject
-        mailer.set_subject(subject)
-
-        # Set the message content
-        mailer.set_html_content(html_content)
-        mailer.set_plaintext_content(text_content or html_content)
-
-        # Optional: add reply-to if needed
-        # mailer.set_mail_reply_to('reply@yourdomain.com')
+        # (Optional) Add reply-to or personalization
+        # mailer.set_mail_reply_to(mail_body, "support@yourdomain.com")
 
         # Send the email
-        response = mailer.send()
+        response = mailer.send(mail_body)
 
         print(f"✅ Email sent to {to_email}, response: {response}")
         return True
