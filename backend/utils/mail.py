@@ -1,24 +1,29 @@
-from mailersend import emails
 import os
+from mailersend import emails
 
 def send_mailersend_email(from_email, to_email, subject, html_content, text_content=None):
     try:
+        # Initialize client
         mailer = emails.NewEmail(os.environ.get('MAILERSEND_API_KEY'))
 
-        mail_from = {
-            "email": from_email,
-            "name": "ERP Support"
-        }
+        # Set up the "from" field
+        mailer.set_mail_from(from_email)
 
-        recipients = [{"email": to_email}]
+        # Set up the "to" field
+        mailer.set_mail_to([to_email])
 
-        response = mailer.send(
-            mail_from=mail_from,
-            to=recipients,
-            subject=subject,
-            html_body=html_content,
-            text_body=text_content or html_content
-        )
+        # Set the subject
+        mailer.set_subject(subject)
+
+        # Set the message content
+        mailer.set_html_content(html_content)
+        mailer.set_plaintext_content(text_content or html_content)
+
+        # Optional: add reply-to if needed
+        # mailer.set_mail_reply_to('reply@yourdomain.com')
+
+        # Send the email
+        response = mailer.send()
 
         print(f"✅ Email sent to {to_email}, response: {response}")
         return True
