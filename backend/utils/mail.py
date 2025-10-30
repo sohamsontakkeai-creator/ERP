@@ -1,28 +1,24 @@
-import os
 from mailersend import emails
 
 def send_mailersend_email(from_email, to_email, subject, html_content, text_content=None):
-    """
-    Send an email using MailerSend v2.
-    """
     try:
-        client = emails.Client(api_key=os.environ.get('MAILERSEND_API_KEY'))
+        mailer = emails.NewEmail(os.environ.get('MAILERSEND_API_KEY'))
 
-        # Construct email payload
-        email_data = {
-            "from": {
-                "email": from_email,
-                "name": "ERP Support"
-            },
-            "to": [
-                {"email": to_email}
-            ],
-            "subject": subject,
-            "html": html_content,
-            "text": text_content or html_content
+        mail_from = {
+            "email": from_email,
+            "name": "ERP Support"
         }
 
-        response = client.send(email_data)
+        recipients = [{"email": to_email}]
+
+        response = mailer.send(
+            mail_from=mail_from,
+            to=recipients,
+            subject=subject,
+            html_body=html_content,
+            text_body=text_content or html_content
+        )
+
         print(f"✅ Email sent to {to_email}, response: {response}")
         return True
 
