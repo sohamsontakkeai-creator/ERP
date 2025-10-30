@@ -2,12 +2,13 @@
 Sales Service Module
 Handles business logic for sales operations
 """
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 from models import db, SalesOrder, Customer, SalesTransaction, ShowroomProduct, FinanceTransaction, DispatchRequest, AssemblyOrder, TransportJob , GatePass
-from models.sales import TransportApprovalRequest
+from models.sales import TransportApprovalRequest, SalesTarget
 from services.showroom_service import ShowroomService
 from services.approval_service import ApprovalService
+import calendar
 
 
 class SalesService:
@@ -713,5 +714,201 @@ class SalesService:
         except Exception as e:
             db.session.rollback()
             raise Exception(f"Error renegotiating transport cost: {str(e)}")
+    
+    # ==================== SALES TARGET MANAGEMENT ====================
+    
+    @staticmethod
+    def set_sales_target(sales_person, year, month, target_amount, assigned_by, notes=None):
+        """Set or update a sales target for a specific month"""
+        try:
+            if month < 1 or month > 12:
+                raise ValueError("Month must be between 1 and 12")
+            
+            if target_amount <= 0:
+                raise ValueError("Target amount must be greater than 0")
+            
+            # Try to get existing target
+            existing_target = SalesTarget.query.filter_by(
+                sales_person=sales_person,
+                year=year,
+                month=month
+            ).first()
+            
+            if existing_target:
+                # Update existing target
+                existing_target.target_amount = target_amount
+                existing_target.assigned_by = assigned_by
+                existing_target.notes = notes
+                existing_target.updated_at = datetime.utcnow()
+                db.session.commit()
+                return existing_target.to_dict()
+            else:
+                # Create new target
+                new_target = SalesTarget(
+                    sales_person=sales_person,
+                    year=year,
+                    month=month,
+                    target_amount=target_amount,
+                    assignment_type='manual',
+                    assigned_by=assigned_by,
+                    notes=notes
+                )
+                db.session.add(new_target)
+                db.session.commit()
+                return new_target.to_dict()
+        
+        except Exception as e:
+            db.session.rollback()
+            raise Exception(f"Error setting sales target: {str(e)}")
+    
+    @staticmethod
+    def get_sales_target(sales_person, year=None, month=None):
+        """Get sales target for a specific salesperson and month"""
+        try:
+            # If year/month not provided, use current month
+            if year is None or month is None:
+                now = datetime.utcnow()
+                year = year or now.year
+                month = month or now.month
+            
+            target = SalesTarget.query.filter_by(
+                sales_person=sales_person,
+                year=year,
+                month=month
+            ).first()
+            
+            return target.to_dict() if target else None
+        
+        except Exception as e:
+            raise Exception(f"Error retrieving sales target: {str(e)}")
+    
+    @staticmethod
+    def get_achieved_sales(sales_person, year, month):
+        """Calculate total achieved sales for a specific month"""
+        try:
+            # Get first and last day of the month
+            first_day = datetime(year, month, 1)
+            last_day = datetime(year, month, calendar.monthrange(year, month)[1], 23, 59, 59)
+            
+            # Sum final_amount of all orders created in this month by the salesperson
+            achieved = db.session.query(
+                db.func.coalesce(db.func.sum(SalesOrder.final_amount), 0)
+            ).filter(
+                SalesOrder.sales_person == sales_person,
+                SalesOrder.created_at >= first_day,
+                SalesOrder.created_at <= last_day,
+                SalesOrder.order_status != 'cancelled'  # Exclude cancelled orders
+            ).scalar()
+            
+            return float(achieved or 0)
+        
+        except Exception as e:
+            raise Exception(f"Error calculating achieved sales: {str(e)}")
+    
+    @staticmethod
+    def get_salesperson_dashboard(sales_person, year=None, month=None):
+        """Get comprehensive sales dashboard for a salesperson with target tracking"""
+        try:
+            # Use current month if not specified
+            if year is None or month is None:
+                now = datetime.utcnow()
+                year = year or now.year
+                month = month or now.month
+            
+            # Get the target
+            target = SalesService.get_sales_target(sales_person, year, month)
+            
+            # Get achieved sales
+            achieved = SalesService.get_achieved_sales(sales_person, year, month)
+            
+            # Calculate metrics
+            target_amount = float(target['targetAmount']) if target else 0
+            remaining_amount = max(target_amount - achieved, 0) if target else 0
+            progress_percentage = (achieved / target_amount * 100) if target and target_amount > 0 else 0
+            exceeded_amount = max(achieved - target_amount, 0) if target else 0
+            
+            # Calculate days metrics
+            now = datetime.utcnow()
+            first_day = datetime(year, month, 1)
+            last_day = datetime(year, month, calendar.monthrange(year, month)[1])
+            days_in_month = calendar.monthrange(year, month)[1]
+            
+            if now.year == year and now.month == month:
+                # Current month
+                current_day = now.day
+                days_elapsed = current_day
+                days_remaining = max(days_in_month - current_day, 0)
+                is_current_month = True
+            else:
+                # Past or future month
+                if now < first_day:
+                    days_elapsed = 0
+                    days_remaining = days_in_month
+                else:
+                    days_elapsed = days_in_month
+                    days_remaining = 0
+                is_current_month = False
+            
+            # Calculate daily average needed
+            daily_avg_needed = 0
+            daily_avg_achieved = 0
+            
+            if days_remaining > 0 and target_amount > 0:
+                daily_avg_needed = remaining_amount / days_remaining if days_remaining > 0 else 0
+            
+            if days_elapsed > 0:
+                daily_avg_achieved = achieved / days_elapsed if days_elapsed > 0 else 0
+            
+            return {
+                'salesPerson': sales_person,
+                'year': year,
+                'month': month,
+                'monthName': calendar.month_name[month],
+                'target': {
+                    'amount': target_amount,
+                    'details': target
+                },
+                'achieved': {
+                    'amount': round(achieved, 2),
+                    'percentage': round(progress_percentage, 2)
+                },
+                'remaining': {
+                    'amount': round(remaining_amount, 2),
+                    'percentage': round(max(100 - progress_percentage, 0), 2)
+                },
+                'exceeded': round(exceeded_amount, 2) if exceeded_amount > 0 else 0,
+                'daysMetrics': {
+                    'daysInMonth': days_in_month,
+                    'daysElapsed': days_elapsed,
+                    'daysRemaining': days_remaining,
+                    'isCurrentMonth': is_current_month
+                },
+                'dailyAverage': {
+                    'needed': round(daily_avg_needed, 2),
+                    'achieved': round(daily_avg_achieved, 2),
+                    'onTrack': daily_avg_achieved >= daily_avg_needed if daily_avg_needed > 0 else None
+                },
+                'status': 'on_track' if progress_percentage >= 100 else ('at_risk' if progress_percentage < 50 else 'progressing')
+            }
+        
+        except Exception as e:
+            raise Exception(f"Error generating sales dashboard: {str(e)}")
+    
+    @staticmethod
+    def get_all_targets_for_salesperson(sales_person, year=None):
+        """Get all targets for a salesperson in a specific year"""
+        try:
+            if year is None:
+                year = datetime.utcnow().year
+            
+            targets = SalesTarget.query.filter_by(
+                sales_person=sales_person,
+                year=year
+            ).order_by(SalesTarget.month).all()
+            
+            return [target.to_dict() for target in targets]
+        
+        except Exception as e:
+            raise Exception(f"Error retrieving targets: {str(e)}")
 
 
