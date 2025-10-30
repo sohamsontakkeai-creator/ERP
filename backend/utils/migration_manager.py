@@ -125,6 +125,24 @@ class MigrationManager:
         );
         """
         
+        create_sales_target_table_sql = """
+        CREATE TABLE IF NOT EXISTS sales_target (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            sales_person VARCHAR(100) NOT NULL,
+            year INT NOT NULL,
+            month INT NOT NULL COMMENT '1-12',
+            target_amount FLOAT NOT NULL COMMENT 'Monthly target amount',
+            assignment_type VARCHAR(50) DEFAULT 'manual' COMMENT 'manual, formula, historical',
+            assigned_by VARCHAR(100),
+            notes TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            UNIQUE KEY uq_sales_target (sales_person, year, month),
+            INDEX idx_sales_person (sales_person),
+            INDEX idx_year_month (year, month)
+    );
+    """
+        
         try:
             connection.execute(text(create_sales_order_table))
             connection.commit()
