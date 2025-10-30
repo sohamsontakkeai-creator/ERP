@@ -178,3 +178,36 @@ class SalesTransaction(db.Model):
             'notes': self.notes,
             'createdAt': self.created_at.isoformat()
         }
+
+
+class SalesTarget(db.Model):
+    """Model for monthly sales targets per salesperson"""
+    
+    id = db.Column(db.Integer, primary_key=True)
+    sales_person = db.Column(db.String(100), nullable=False)  # Link to salesperson name
+    year = db.Column(db.Integer, nullable=False)
+    month = db.Column(db.Integer, nullable=False)  # 1-12
+    target_amount = db.Column(db.Float, nullable=False)  # Target amount for the month
+    assignment_type = db.Column(db.String(50), default='manual')  # manual, formula, historical
+    assigned_by = db.Column(db.String(100), nullable=True)  # Admin or user who assigned
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Unique constraint to prevent duplicate targets for same salesperson, month, year
+    __table_args__ = (db.UniqueConstraint('sales_person', 'year', 'month', name='uq_sales_target'),)
+    
+    def to_dict(self):
+        """Convert model instance to dictionary"""
+        return {
+            'id': self.id,
+            'salesPerson': self.sales_person,
+            'year': self.year,
+            'month': self.month,
+            'targetAmount': self.target_amount,
+            'assignmentType': self.assignment_type,
+            'assignedBy': self.assigned_by,
+            'notes': self.notes,
+            'createdAt': self.created_at.isoformat(),
+            'updatedAt': self.updated_at.isoformat()
+        }
