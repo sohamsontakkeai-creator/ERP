@@ -27,6 +27,8 @@ import { toast } from "@/components/ui/use-toast";
 
 import { API_BASE as API_URL } from '@/lib/api';
 import OrderStatusBar from '@/components/ui/OrderStatusBar';
+import { GuestDialog } from '@/components/GuestDialog';
+import { UserCheck } from 'lucide-react';
 
 const PurchaseDepartment = () => {
   const { user } = useAuth();
@@ -39,6 +41,7 @@ const PurchaseDepartment = () => {
     quantity: 0,
     materials: []
   });
+  const [showGuestDialog, setShowGuestDialog] = useState(false);
 
   // Fetch purchase orders
   const fetchPurchaseOrders = async () => {
@@ -324,15 +327,26 @@ const PurchaseDepartment = () => {
                 </div>
               </div>
             </div>
-            {/* Right: User Panel */}
-            <div className="bg-gradient-to-r from-green-50 to-indigo-50 border-2 border-green-200 px-4 py-4 sm:px-6 rounded-lg shadow-sm w-full sm:w-auto">
-              <div className="flex items-center space-x-3">
-                <Users className="w-5 h-5 text-green-600" />
-                <div>
-                  <p className="text-gray-600 text-xs font-medium">Purchase Team</p>
-                  <p className="text-green-600 text-xs font-medium">Purchase Management</p>
+            {/* Right: User Panel + Add Guest Button */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="bg-gradient-to-r from-green-50 to-indigo-50 border-2 border-green-200 px-4 py-4 sm:px-6 rounded-lg shadow-sm w-full sm:w-auto">
+                <div className="flex items-center space-x-3">
+                  <Users className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="text-gray-600 text-xs font-medium">Purchase Team</p>
+                    <p className="text-green-600 text-xs font-medium">Purchase Management</p>
+                  </div>
                 </div>
               </div>
+
+              {/* Add Guest Button */}
+              <Button
+                onClick={() => setShowGuestDialog(true)}
+                className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 w-full sm:w-auto"
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>Add Guest</span>
+              </Button>
             </div>
           </div>
         </div>
@@ -660,6 +674,12 @@ const PurchaseDepartment = () => {
           </div>
         </div>
       </div>
+
+      {/* Guest Dialog */}
+      <GuestDialog 
+        open={showGuestDialog} 
+        onOpenChange={setShowGuestDialog}
+      />
     </div>
   );
 };
