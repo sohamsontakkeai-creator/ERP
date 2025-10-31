@@ -30,10 +30,11 @@ import {
   Settings,
   Shield,
   Users,
-  RefreshCw
+  RefreshCw,
+  UserCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
+import { GuestDialog } from '@/components/GuestDialog';
 import { API_BASE } from '@/lib/api';
 import OrderStatusBar from '@/components/ui/OrderStatusBar';
 const ShowroomDepartment = () => {
@@ -44,6 +45,7 @@ const ShowroomDepartment = () => {
   const [displayedProducts, setDisplayedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showGuestDialog, setShowGuestDialog] = useState(false);
   const [activeTab, setActiveTab] = useState(0); // Tab state: 0 = Products Ready for Showroom, 1 = Products on Display
   const [testingDialogOpen, setTestingDialogOpen] = useState(false);
   const [selectedProductForTesting, setSelectedProductForTesting] = useState(null);
@@ -333,15 +335,26 @@ const ShowroomDepartment = () => {
                 </div>
               </div>
             </div>
-            {/* Right: User Panel */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 px-4 py-4 sm:px-6 rounded-lg shadow-sm w-full sm:w-auto">
-              <div className="flex items-center space-x-3">
-                <Users className="w-5 h-5 text-blue-600" />
-                <div>
-                  <p className="text-gray-600 text-xs font-medium">Showroom Team</p>
-                  <p className="text-blue-600 text-xs font-medium">Product Display Management</p>
+            {/* Right: User Panel + Add Guest Button */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 px-4 py-4 sm:px-6 rounded-lg shadow-sm w-full sm:w-auto">
+                <div className="flex items-center space-x-3">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="text-gray-600 text-xs font-medium">Showroom Team</p>
+                    <p className="text-blue-600 text-xs font-medium">Product Display Management</p>
+                  </div>
                 </div>
               </div>
+
+              {/* Add Guest Button */}
+              <Button
+                onClick={() => setShowGuestDialog(true)}
+                className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 w-full sm:w-auto"
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>Add Guest</span>
+              </Button>
             </div>
           </div>
         </div>
@@ -711,6 +724,7 @@ const ShowroomDepartment = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       <div className="mt-12 bg-white border-2 border-gray-200 rounded-lg p-6 shadow-sm">
         <div className="text-center text-gray-600">
           <p className="font-medium">
@@ -721,6 +735,12 @@ const ShowroomDepartment = () => {
           </p>
         </div>
       </div>
+
+      {/* Guest Dialog */}
+      <GuestDialog 
+        open={showGuestDialog} 
+        onOpenChange={setShowGuestDialog}
+      />
     </div>
     </div>
   );
