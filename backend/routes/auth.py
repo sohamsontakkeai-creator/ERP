@@ -298,7 +298,7 @@ def forgot_password():
         ).start()
 
         return jsonify({
-            'message': 'Password reset link has been sent to admin email.',
+            'message': 'A password reset link has been sent to the support email. The support team will assist you with your password reset.',
             'reset_token': reset_token_obj.token,
             'reset_url': reset_url
         }), 200
