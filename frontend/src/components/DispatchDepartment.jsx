@@ -33,6 +33,8 @@ import {
 
 import { API_BASE } from '@/lib/api';
 import OrderStatusBar from '@/components/ui/OrderStatusBar';
+import { GuestDialog } from '@/components/GuestDialog';
+import { UserCheck } from 'lucide-react';
 
 const DispatchDepartment = () => {
     const navigate = useNavigate();
@@ -45,6 +47,7 @@ const DispatchDepartment = () => {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [showProcessDialog, setShowProcessDialog] = useState(false);
     const [showCustomerDetailsDialog, setShowCustomerDetailsDialog] = useState(false);
+    const [showGuestDialog, setShowGuestDialog] = useState(false);
     const { toast } = useToast();
     
     // Notification counts
@@ -361,15 +364,26 @@ const DispatchDepartment = () => {
               </div>
             </div>
           </div>
-          {/* Right: User Panel */}
-          <div className="bg-gradient-to-r from-green-50 to-indigo-50 border-2 border-green-200 px-4 py-4 sm:px-6 rounded-lg shadow-sm w-full sm:w-auto">
-            <div className="flex items-center space-x-3">
-              <Users className="w-5 h-5 text-blue-600" />
-              <div>
-                <p className="text-gray-600 text-xs font-medium">Dispatch Team</p>
-                <p className="text-green-600 text-xs font-medium">Order Dispatch Management</p>
+          {/* Right: User Panel + Add Guest Button */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="bg-gradient-to-r from-green-50 to-indigo-50 border-2 border-green-200 px-4 py-4 sm:px-6 rounded-lg shadow-sm w-full sm:w-auto">
+              <div className="flex items-center space-x-3">
+                <Users className="w-5 h-5 text-blue-600" />
+                <div>
+                  <p className="text-gray-600 text-xs font-medium">Dispatch Team</p>
+                  <p className="text-green-600 text-xs font-medium">Order Dispatch Management</p>
+                </div>
               </div>
             </div>
+
+            {/* Add Guest Button */}
+            <Button
+              onClick={() => setShowGuestDialog(true)}
+              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 w-full sm:w-auto"
+            >
+              <UserCheck className="w-4 h-4" />
+              <span>Add Guest</span>
+            </Button>
           </div>
         </div>
       </div>
@@ -952,6 +966,9 @@ const DispatchDepartment = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Guest Dialog */}
+            <GuestDialog open={showGuestDialog} onOpenChange={setShowGuestDialog} />
         </div>
         <div className="mt-12 bg-white border-2 border-gray-200 rounded-lg p-6 shadow-sm">
           <div className="text-center text-gray-600">
