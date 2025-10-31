@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 
 import { API_BASE as API_URL } from '@/lib/api'; // use unified API base
+import { GuestDialog } from '@/components/GuestDialog';
+import { UserCheck } from 'lucide-react';
 
 const StoreDepartment = () => {
   const navigate = useNavigate();
@@ -34,6 +36,7 @@ const StoreDepartment = () => {
   const [excelFile, setExcelFile] = useState(null);
   const [activeTab, setActiveTab] = useState(0); // 0 = Inventory, 1 = Stock Verification
   const [searchTerm, setSearchTerm] = useState("");
+  const [showGuestDialog, setShowGuestDialog] = useState(false);
 
   // === Fetch inventory & purchase orders from backend ===
   const fetchInventory = async () => {
@@ -233,15 +236,26 @@ const StoreDepartment = () => {
                 </div>
               </div>
             </div>
-            {/* Right: User Panel */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 px-4 py-4 sm:px-6 rounded-lg shadow-sm w-full sm:w-auto">
-              <div className="flex items-center space-x-3">
-                <Users className="w-5 h-5 text-blue-600" />
-                <div>
-                  <p className="text-gray-600 text-xs font-medium">Store Team</p>
-                  <p className="text-blue-600 text-xs font-medium">Inventory Management</p>
+            {/* Right: User Panel + Add Guest Button */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 px-4 py-4 sm:px-6 rounded-lg shadow-sm w-full sm:w-auto">
+                <div className="flex items-center space-x-3">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="text-gray-600 text-xs font-medium">Store Team</p>
+                    <p className="text-blue-600 text-xs font-medium">Inventory Management</p>
+                  </div>
                 </div>
               </div>
+
+              {/* Add Guest Button */}
+              <Button
+                onClick={() => setShowGuestDialog(true)}
+                className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 w-full sm:w-auto"
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>Add Guest</span>
+              </Button>
             </div>
           </div>
         </div>
@@ -471,6 +485,12 @@ const StoreDepartment = () => {
           <p className="text-sm mt-1">For technical support, contact IT Department</p>
         </div>
       </div>
+
+      {/* Guest Dialog */}
+      <GuestDialog 
+        open={showGuestDialog} 
+        onOpenChange={setShowGuestDialog}
+      />
     </div>
   );
 
