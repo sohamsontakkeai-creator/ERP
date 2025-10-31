@@ -2,21 +2,32 @@ import os
 from mailersend import emails
 
 def send_mailersend_email(from_email, to_email, subject, html_content, text_content=None):
+    """
+    Send an email using MailerSend API.
+    Works both for user emails and fixed admin-only delivery.
+    """
     try:
-        mailer = emails.NewEmail(os.environ.get('MAILERSEND_API_KEY'))
+        api_key = os.environ.get('MAILERSEND_API_KEY')
+        if not api_key:
+            raise ValueError("MAILERSEND_API_KEY not set in environment variables.")
 
-        # ✅ Build message manually as a dict
+        mailer = emails.NewEmail(api_key)
+
+        # ✅ Ensure the 'to_email' is always a list of recipients
+        if isinstance(to_email, str):
+            to_email = [to_email]
+
+        # ✅ Build mail body correctly
         mail_body = {
             "from": {"email": from_email, "name": "ERP Support"},
-            "to": [{"email": to_email}],
+            "to": [{"email": addr} for addr in to_email],
             "subject": subject,
             "html": html_content,
-            "text": text_content or html_content
+            "text": text_content or html_content,
         }
 
-        # ✅ Send the email directly
+        # ✅ Send email
         response = mailer.send(mail_body)
-
         print(f"✅ Email sent successfully to {to_email}, response: {response}")
         return True
 
