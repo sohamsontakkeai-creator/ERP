@@ -19,13 +19,15 @@ import {
   FileText,
   Calendar,
   Users,
-  Package
+  Package,
+  UserCheck
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import productData from '@/data/productData.js';
 
 import { API_BASE as API_BASE_URL } from '@/lib/api';
 import OrderStatusBar from '@/components/ui/OrderStatusBar';
+import { GuestDialog } from '@/components/GuestDialog';
 
 const ProductionPlanning = () => {
   const { user } = useAuth();
@@ -37,6 +39,7 @@ const ProductionPlanning = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
   const [ordersLoading, setOrdersLoading] = useState(true);
+  const [showGuestDialog, setShowGuestDialog] = useState(false);
 
   // API Functions
   const fetchOrders = async () => {
@@ -223,14 +226,23 @@ const ProductionPlanning = () => {
               </div>
             </div>
             {/* Right: User Panel */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 px-4 py-4 sm:px-6 rounded-lg shadow-sm w-full sm:w-auto">
-              <div className="flex items-center space-x-3">
-                <Users className="w-5 h-5 text-blue-600" />
-                <div>
-                  <p className="text-gray-600 text-xs font-medium">Production Team</p>
-                  <p className="text-blue-600 text-xs font-medium">Production Planning Department</p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 px-4 py-4 sm:px-6 rounded-lg shadow-sm w-full sm:w-auto">
+                <div className="flex items-center space-x-3">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="text-gray-600 text-xs font-medium">Production Team</p>
+                    <p className="text-blue-600 text-xs font-medium">Production Planning Department</p>
+                  </div>
                 </div>
               </div>
+              <Button
+                onClick={() => setShowGuestDialog(true)}
+                className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg flex items-center justify-center gap-2 w-full sm:w-auto"
+              >
+                <UserCheck className="w-4 h-4" />
+                Add Guest
+              </Button>
             </div>
           </div>
         </div>
@@ -462,6 +474,7 @@ const ProductionPlanning = () => {
           </div>
         </div>
       </div>
+      <GuestDialog open={showGuestDialog} onOpenChange={setShowGuestDialog} />
     </div>
   );
 };
