@@ -18,10 +18,12 @@ import {
   Star,
   RefreshCw,
   Building,
-  Users
+  Users,
+  UserCheck
 } from 'lucide-react';
 import { API_BASE as API_BASE_URL } from '@/lib/api';
 import OrderStatusBar from '@/components/ui/OrderStatusBar';
+import { GuestDialog } from '@/components/GuestDialog';
 
 import { useMediaQuery } from "react-responsive";
 
@@ -34,6 +36,7 @@ const AssemblyTeam = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState({});
   const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [showGuestDialog, setShowGuestDialog] = useState(false);
 
   useEffect(() => {
     fetchAssemblyOrders();
@@ -315,14 +318,23 @@ const AssemblyTeam = () => {
               </div>
             </div>
             {/* Right: User Panel */}
-            <div className="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-200 px-4 py-4 sm:px-6 rounded-lg shadow-sm w-full sm:w-auto">
-              <div className="flex items-center space-x-3">
-                <Users className="w-5 h-5 text-orange-600" />
-                <div>
-                  <p className="text-gray-900 font-bold text-sm">Assembly Team</p>
-                  <p className="text-orange-600 text-xs font-medium">Product Assembly Management</p>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="bg-gradient-to-r from-orange-50 to-red-50 border-2 border-orange-200 px-4 py-4 sm:px-6 rounded-lg shadow-sm w-full sm:w-auto">
+                <div className="flex items-center space-x-3">
+                  <Users className="w-5 h-5 text-orange-600" />
+                  <div>
+                    <p className="text-gray-900 font-bold text-sm">Assembly Team</p>
+                    <p className="text-orange-600 text-xs font-medium">Product Assembly Management</p>
+                  </div>
                 </div>
               </div>
+              <Button
+                onClick={() => setShowGuestDialog(true)}
+                className="bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg flex items-center justify-center gap-2 w-full sm:w-auto"
+              >
+                <UserCheck className="w-4 h-4" />
+                Add Guest
+              </Button>
             </div>
           </div>
         </div>
@@ -654,6 +666,7 @@ const AssemblyTeam = () => {
           </div>
         </div>
       </div>
+      <GuestDialog open={showGuestDialog} onOpenChange={setShowGuestDialog} />
     </div>
   );
 };
