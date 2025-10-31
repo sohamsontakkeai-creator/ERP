@@ -27,13 +27,15 @@ import {
     Truck,
     Search as SearchIcon,
     Award,
-    X
+    X,
+    UserCheck
 } from 'lucide-react';
 import { API_BASE } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import OrderStatusBar from '@/components/ui/OrderStatusBar';
 import SalesPerformanceDashboard from '@/components/SalesPerformanceDashboard';
+import { GuestDialog } from '@/components/GuestDialog';
 
 const SalesDepartment = () => {
     const navigate = useNavigate();
@@ -70,6 +72,7 @@ const SalesDepartment = () => {
         pendingDispatch: 0
     });
     const [showPerformanceModal, setShowPerformanceModal] = useState(false);
+    const [showGuestDialog, setShowGuestDialog] = useState(false);
     const { toast } = useToast();
 
     // Form states
@@ -855,6 +858,15 @@ const SalesDepartment = () => {
             >
               <Award className="w-4 h-4" />
               <span>My Performance</span>
+            </Button>
+
+            {/* Add Guest Button */}
+            <Button
+              onClick={() => setShowGuestDialog(true)}
+              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 w-full sm:w-auto"
+            >
+              <UserCheck className="w-4 h-4" />
+              <span>Add Guest</span>
             </Button>
           </div>
 
@@ -2172,7 +2184,7 @@ const SalesDepartment = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* Transport Demand Review Dialog */}
+           {/* Transport Demand Review Dialog */}
             <Dialog open={showTransportDemandDialog} onOpenChange={setShowTransportDemandDialog}>
                 <DialogContent className="max-w-2xl bg-white">
                     <DialogHeader>
@@ -2642,8 +2654,12 @@ const SalesDepartment = () => {
                     </div>
                 </DialogContent>
             </Dialog>
-
-
+            {/* Guest Dialog */}
+                <GuestDialog 
+                open={showGuestDialog} 
+                onOpenChange={setShowGuestDialog}
+                onSuccess={() => fetchData()} // Optional: refresh data after guest is added
+                />
             </div>
             <div className="mt-12 bg-white border-2 border-gray-200 rounded-lg p-6 shadow-sm">
           <div className="text-center text-gray-600">
