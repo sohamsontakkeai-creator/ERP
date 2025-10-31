@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,8 @@ import {
 import { API_BASE } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { GuestDialog } from '@/components/GuestDialog';
+import { UserCheck } from 'lucide-react';
 
 const HRDepartment = () => {
   const navigate = useNavigate();
@@ -45,6 +47,7 @@ const HRDepartment = () => {
   const [modalFormData, setModalFormData] = useState({});
   const [leaveSearchQuery, setLeaveSearchQuery] = useState("");
   const [balanceSearchQuery, setBalanceSearchQuery] = useState("");
+  const [showGuestDialog, setShowGuestDialog] = useState(false);
   const { toast } = useToast();
   
 
@@ -2449,15 +2452,26 @@ const DashboardView = ({ employees = [] }) => {  // ✅ Accept employees as prop
                 </div>
               </div>
             </div>
-            {/* Right: User Panel */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 px-4 py-4 sm:px-6 rounded-lg shadow-sm w-full sm:w-auto">
-              <div className="flex items-center space-x-3">
-                <Users className="w-5 h-5 text-blue-600" />
-                <div>
-                  <p className="text-gray-600 text-xs font-medium">HR Team</p>
-                  <p className="text-blue-600 text-xs font-medium">Employees Management</p>
+            {/* Right: User Panel + Add Guest Button */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 px-4 py-4 sm:px-6 rounded-lg shadow-sm w-full sm:w-auto">
+                <div className="flex items-center space-x-3">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="text-gray-600 text-xs font-medium">HR Team</p>
+                    <p className="text-blue-600 text-xs font-medium">Employees Management</p>
+                  </div>
                 </div>
               </div>
+
+              {/* Add Guest Button */}
+              <Button
+                onClick={() => setShowGuestDialog(true)}
+                className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 w-full sm:w-auto"
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>Add Guest</span>
+              </Button>
             </div>
           </div>
         </div>
@@ -4510,6 +4524,11 @@ const DashboardView = ({ employees = [] }) => {  // ✅ Accept employees as prop
             <p className="font-medium">© Human Resource Management System</p>
             <p className="text-sm mt-1">For technical support, contact IT Department</p>
       </div>
+       {/* Guest Dialog */}
+      <GuestDialog 
+        open={showGuestDialog} 
+        onOpenChange={setShowGuestDialog}
+      />
     </div>
     </div>
   );
