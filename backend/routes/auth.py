@@ -12,6 +12,7 @@ import mailersend
 from threading import Thread
 import os 
 from utils.mail import send_mailersend_email
+from utils.mail import send_email_async
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -247,57 +248,64 @@ def delete_user(user_id):
 def forgot_password():
     """
     Handle forgot password requests and send reset link via MailerSend.
-    The reset email is always sent to a fixed admin/support email address,
-    but the link corresponds to the requesting user's account.
+    The reset link will always be sent to the ADMIN email, but the
+    password reset will apply to the user’s own account.
     """
     try:
         data = request.get_json() or {}
         email = data.get('email')
+
         if not email:
             return jsonify({'error': 'Email is required'}), 400
 
+        # Check if user exists
         user = User.query.filter_by(email=email).first()
         if not user:
             return jsonify({'error': 'No account found with this email'}), 404
 
-        # Create password reset token for that user
+        # Create password reset token for that specific user
         reset_token_obj = PasswordResetToken.create_token(user.id)
 
+        # Generate reset link
         frontend_base_url = current_app.config.get('FRONTEND_BASE_URL', 'http://localhost:5173')
         reset_url = f"{frontend_base_url}/reset-password?token={reset_token_obj.token}"
 
-        # Email content
+        # Email details
         user_name = getattr(user, 'name', None) or getattr(user, 'username', None) or "User"
         subject = f"Password Reset Request for {user_name}"
-        text_content = (
-            f"A password reset was requested for user: {user_name} ({user.email}).\n\n"
-            f"Click this link to reset their password:\n{reset_url}"
-        )
-        html_content = f"""
-            <p><strong>Password Reset Request</strong></p>
-            <p>A user has requested to reset their password.</p>
-            <p><b>User:</b> {user_name} ({user.email})</p>
-            <p><a href="{reset_url}">Click here to reset their password</a></p>
-            <p>If you did not request this, you can ignore this email.</p>
-        """
 
-        # Always send email to the admin/support email (not the user)
+        # ✅ Send to admin email only
         admin_email = "alankarengghelp@gmail.com"
 
-        # Send email asynchronously
+        text_content = (
+            f"User {user_name} ({email}) has requested a password reset.\n\n"
+            f"Click this link to reset their password:\n{reset_url}"
+        )
+
+        html_content = f"""
+            <p><b>User:</b> {user_name} ({email})</p>
+            <p>Requested a password reset.</p>
+            <p><a href="{reset_url}" style="color: blue; text-decoration: underline;">
+                Click here to reset their password
+            </a></p>
+            <p>If this wasn't expected, please ignore this message.</p>
+        """
+
+        # Send email asynchronously to admin
         Thread(
             target=send_email_async,
             args=(current_app._get_current_object(), admin_email, subject, html_content, text_content)
         ).start()
 
         return jsonify({
-            'message': f'A reset link for {user.email} has been sent to admin email.',
+            'message': 'Password reset link has been sent to admin email.',
             'reset_token': reset_token_obj.token,
             'reset_url': reset_url
         }), 200
 
     except Exception as e:
         db.session.rollback()
+        print(f"❌ Forgot password error: {e}")
         return jsonify({'error': str(e)}), 500
         
 @auth_bp.route('/auth/reset-password', methods=['POST'])
