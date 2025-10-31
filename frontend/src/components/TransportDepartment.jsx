@@ -49,6 +49,8 @@ import { useToast } from '@/components/ui/use-toast';
 
 import { API_BASE } from '@/lib/api';
 import OrderStatusBar from '@/components/ui/OrderStatusBar';
+import { GuestDialog } from '@/components/GuestDialog';
+import { UserCheck } from 'lucide-react';
 const TransportDepartment = () => {
   // Fix: Add missing afterDeliveryOrders state
   const [afterDeliveryOrders, setAfterDeliveryOrders] = useState([]);
@@ -152,6 +154,9 @@ const TransportDepartment = () => {
     fuelSurcharge: 0,
     totalCost: 0
   });
+
+  // Guest Dialog state
+  const [showGuestDialog, setShowGuestDialog] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -1002,7 +1007,7 @@ const TransportDepartment = () => {
         driverContact: newVehicle.driver_phone
       };
       
-      const response = await fetch(`${API_BASE}/fleet/add`, {
+      const response = await fetch('/api/fleet/add', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1074,7 +1079,7 @@ const TransportDepartment = () => {
         currentLocation: editVehicle.current_location,
         notes: editVehicle.notes
       };
-      const response = await fetch(`${API_BASE}/fleet/${vehicleId}`, {
+      const response = await fetch(`/api/fleet/${vehicleId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -1119,7 +1124,7 @@ const TransportDepartment = () => {
 
   const handleDeleteVehicle = async (vehicleId) => {
     try {
-      const response = await fetch(`${API_BASE}/fleet/${vehicleId}`, { method: 'DELETE' });
+      const response = await fetch(`/api/fleet/${vehicleId}`, { method: 'DELETE' });
       const respJson = await response.json().catch(() => ({}));
       if (response.ok) {
         toast({ title: 'Deleted', description: 'Vehicle removed from fleet' });
@@ -1242,15 +1247,26 @@ const TransportDepartment = () => {
               </div>
             </div>
 
-            {/* User Info Panel */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 px-4 py-4 sm:px-6 rounded-lg shadow-sm w-full sm:w-auto">
-              <div className="flex items-center space-x-3">
-                <Users className="w-5 h-5 text-blue-600" />
-                <div>
-                  <p className="text-gray-600 text-xs font-medium">Transport Team</p>
-                  <p className="text-blue-600 text-xs font-medium">Fleet Management</p>
+            {/* Right: User Panel + Add Guest Button */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 px-4 py-4 sm:px-6 rounded-lg shadow-sm w-full sm:w-auto">
+                <div className="flex items-center space-x-3">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="text-gray-600 text-xs font-medium">Transport Team</p>
+                    <p className="text-blue-600 text-xs font-medium">Fleet Management</p>
+                  </div>
                 </div>
               </div>
+
+              {/* Add Guest Button */}
+              <Button
+                onClick={() => setShowGuestDialog(true)}
+                className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 w-full sm:w-auto"
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>Add Guest</span>
+              </Button>
             </div>
           </div>
         </div>
@@ -2822,7 +2838,7 @@ const TransportDepartment = () => {
           </Card>
         </TabsContent>
       </Tabs>
-      {/* Close Tabs here */}
+       {/* Close Tabs here */}
       </div>
         <div className="mt-12 bg-white border-2 border-gray-200 rounded-lg p-6 shadow-sm">
           <div className="text-center text-gray-600">
@@ -3087,7 +3103,13 @@ const TransportDepartment = () => {
         )}
       </DialogContent>
     </Dialog>
+     {/* Guest Dialog */}
+          <GuestDialog 
+            open={showGuestDialog} 
+            onOpenChange={setShowGuestDialog}
+          />
     </>
+    
   );
 };
 
