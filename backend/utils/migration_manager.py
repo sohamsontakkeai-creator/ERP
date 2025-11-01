@@ -181,7 +181,7 @@ class MigrationManager:
         """Create HR tables"""
         print("🔄 Running HR migration...")
         
-                create_employees_table = """
+        create_employees_table = """
         CREATE TABLE IF NOT EXISTS employees (
             id INT AUTO_INCREMENT PRIMARY KEY,
             employee_id VARCHAR(20) UNIQUE NOT NULL,
