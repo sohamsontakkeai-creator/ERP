@@ -14,47 +14,6 @@ gate_entry_bp = Blueprint('gate_entry', __name__)
 attendance_service = AttendanceIntegrationService()
 
 
-@gate_entry_bp.route('/gate-entry/register', methods=['POST'])
-def register_user():
-    """Register a new user"""
-    import logging
-    logger = logging.getLogger(__name__)
-    
-    logger.info("🔵 REGISTER_USER endpoint called")
-    
-    data = request.get_json() or {}
-    logger.info(f"Request data keys: {list(data.keys())}")
-    
-    name = data.get('name')
-    phone = data.get('phone')
-    photos = data.get('photos')  # array of base64 images
-    face_encoding = data.get('face_encoding')
-    
-    logger.info(f"Name: {name}")
-    logger.info(f"Phone: {phone}")
-    logger.info(f"Photos type: {type(photos)}")
-    if photos:
-        logger.info(f"Photos count: {len(photos)}")
-        for i, p in enumerate(photos):
-            if p:
-                logger.info(f"  Photo {i+1}: {len(str(p))} chars, is_str={isinstance(p, str)}, starts_with={str(p)[:50]}")
-            else:
-                logger.info(f"  Photo {i+1}: EMPTY/NULL")
-    else:
-        logger.info("⚠️  Photos is None or empty!")
-
-    if not name or not phone:
-        logger.warning("❌ Name or phone missing")
-        return jsonify({'success': False, 'message': 'Name and phone are required'}), 400
-
-    result = gate_entry_service_db.register_user(name, phone, photos, face_encoding)
-
-    if result['success']:
-        logger.info(f"✅ Registration successful: {result.get('face_encodings_count')} encodings")
-        return jsonify(result), 201
-    else:
-        logger.error(f"❌ Registration failed: {result.get('message')}")
-        return jsonify(result), 400
 
 
 @gate_entry_bp.route('/gate-entry/users', methods=['GET'])
@@ -355,7 +314,7 @@ def recognize_face():
         if not users:
             return jsonify({
                 'success': False,
-                'message': 'No registered faces in database. Please register users first.'
+                'message': 'No registered faces in database. Please ask HR to register employees first.'
             }), 404
         
         # Build dictionary of face encodings
@@ -492,4 +451,4 @@ def get_attendance_status(phone):
             'employee_status': employee.status,
             'attendance': None,
             'message': 'No attendance marked for today'
-        })
+        }) 
