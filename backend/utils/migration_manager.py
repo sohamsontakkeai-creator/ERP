@@ -6,6 +6,7 @@ import os
 import sys
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
+from sqlalchemy.dialects.mysql import LONGTEXT
 
 # Load environment variables
 load_dotenv()
@@ -180,7 +181,7 @@ class MigrationManager:
         """Create HR tables"""
         print("🔄 Running HR migration...")
         
-        create_employees_table = """
+                create_employees_table = """
         CREATE TABLE IF NOT EXISTS employees (
             id INT AUTO_INCREMENT PRIMARY KEY,
             employee_id VARCHAR(20) UNIQUE NOT NULL,
@@ -197,6 +198,8 @@ class MigrationManager:
             salary_type enum('daily','monthly','hourly'),
             salary FLOAT NOT NULL,
             status VARCHAR(20) DEFAULT 'active',
+            photo TEXT,
+            face_encoding LONGTEXT,
             manager_id INT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
