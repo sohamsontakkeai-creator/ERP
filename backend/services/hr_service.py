@@ -170,7 +170,8 @@ class HRService:
 
     @staticmethod
     def create_employee(employee_data):
-        """Create a new employee"""
+        """Create a new employee and register for gate entry (with photo/face_encoding)"""
+        from services.gate_entry_service_db import gate_entry_service_db
         required_fields = ['firstName', 'lastName', 'email', 'department', 'designation', 'joiningDate', 'salary']
 
         for field in required_fields:
@@ -186,6 +187,15 @@ class HRService:
         last_employee = Employee.query.order_by(Employee.id.desc()).first()
         employee_id = f"EMP{str(last_employee.id + 1).zfill(4)}" if last_employee else "EMP0001"
 
+        # Handle photos and face encoding
+        photos = employee_data.get('photos', [])
+        photo = employee_data.get('photo')  # First photo for preview
+        face_encoding = employee_data.get('faceEncoding')
+
+        # If no specific preview photo provided, use first captured photo
+        if not photo and photos and len(photos) > 0:
+            photo = photos[0]
+
         employee = Employee(
             employee_id=employee_id,
             first_name=employee_data['firstName'],
@@ -200,11 +210,33 @@ class HRService:
             joining_date=datetime.fromisoformat(employee_data['joiningDate']),
             salary=employee_data['salary'],
             salary_type=employee_data.get('salaryType', 'daily'),
-            manager_id=employee_data.get('managerId')
+            manager_id=employee_data.get('managerId'),
+            photo=photo,
+            face_encoding=face_encoding
         )
 
         db.session.add(employee)
         db.session.commit()
+
+        # Register as GateUser for gate entry (if not already exists)
+        # Use the same photo and face_encoding if provided
+        name = f"{employee.first_name} {employee.last_name}"
+        phone = employee.phone
+        photos = [photo] if photo else None
+        # If face_encoding is not provided, let gate_entry_service_db generate it from photo
+        gateuser_result = gate_entry_service_db.register_user(name=name, phone=phone, photos=photos, face_encoding=face_encoding)
+
+        # After registration, update Employee's face_encoding and photo from GateUser if available
+        from models.gate_entry import GateUser
+        gate_user = GateUser.query.filter_by(phone=phone).first()
+        if gate_user:
+            # Only update if values exist
+            if gate_user.face_encoding:
+                employee.face_encoding = gate_user.face_encoding
+            if gate_user.photo:
+                employee.photo = gate_user.photo
+            db.session.commit()
+
         return employee.to_dict()
 
     @staticmethod
@@ -423,6 +455,7 @@ class HRService:
         # Convert leave type to uppercase enum
         leave_type_str = leave_data['leaveType'].upper()
 
+
         leave = Leave(
             employee_id=employee_id,
             name=employee.full_name,
@@ -430,7 +463,14 @@ class HRService:
             start_date=start_date,
             end_date=end_date,
             days_requested=days_requested,
-            reason=leave_data.get('reason')
+            reason=leave_data.get('reason'),
+            # New approval workflow fields
+            manager_id=leave_data.get('managerId'),
+            manager_status=leave_data.get('managerStatus', 'PENDING'),
+            manager_approved_at=leave_data.get('managerApprovedAt'),
+            manager_rejection_reason=leave_data.get('managerRejectionReason'),
+            hr_rejection_reason=leave_data.get('hrRejectionReason'),
+            approval_stage=leave_data.get('approvalStage', 'manager_review')
         )
 
         db.session.add(leave)
