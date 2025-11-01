@@ -4,10 +4,15 @@ API endpoints for user authentication (login, registration, password reset, OAut
 """
 from flask import Blueprint, request, jsonify, current_app
 from flask_mail import Message
-from flask_jwt_extended import create_access_token
 from models.user import User, UserStatus, db
 from models.password_reset_token import PasswordResetToken
 from werkzeug.security import check_password_hash, generate_password_hash
+import threading
+import mailersend
+from threading import Thread
+import os 
+from utils.mail import send_mailersend_email
+from utils.mail import send_email_async
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -77,14 +82,10 @@ def login():
         if user.status != UserStatus.APPROVED:
             return jsonify({'error': 'Your account is pending approval', 'status': user.status.value}), 403
 
-        # Create JWT access token
-        access_token = create_access_token(identity=user.id)
-
-        # Return user data with token
+        # Return user data
         return jsonify({
             'message': 'Login successful',
-            'user': user.to_dict(),
-            'access_token': access_token
+            'user': user.to_dict()
         }), 200
 
     except Exception as e:
@@ -190,6 +191,7 @@ def get_users_by_department():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+
 @auth_bp.route('/auth/users/<int:user_id>/department', methods=['PUT'])
 def update_user_department(user_id):
     """Update user's department (admin only)"""
@@ -244,45 +246,68 @@ def delete_user(user_id):
 
 @auth_bp.route('/auth/forgot-password', methods=['POST'])
 def forgot_password():
-    """Send password reset email to support email"""
+    """
+    Handle forgot password requests and send reset link via MailerSend.
+    The reset link will always be sent to the ADMIN email, but the
+    password reset will apply to the user’s own account.
+    """
     try:
         data = request.get_json() or {}
+        email = data.get('email')
 
-        if 'email' not in data:
+        if not email:
             return jsonify({'error': 'Email is required'}), 400
 
-        user = User.query.filter_by(email=data['email']).first()
+        # Check if user exists
+        user = User.query.filter_by(email=email).first()
         if not user:
-            # Reveal error if email not found
-            return jsonify({'error': 'No account found with the provided email address. Please check and try again.'}), 404
+            return jsonify({'error': 'No account found with this email'}), 404
 
-        # Generate reset token using PasswordResetToken model
+        # Create password reset token for that specific user
         reset_token_obj = PasswordResetToken.create_token(user.id)
 
-        # For testing purposes, return the token in response
-        # In production, send email with reset link
-        # Use frontend base URL from config or environment variable, fallback to localhost with port 5173
+        # Generate reset link
         frontend_base_url = current_app.config.get('FRONTEND_BASE_URL', 'http://localhost:5173')
         reset_url = f"{frontend_base_url}/reset-password?token={reset_token_obj.token}"
 
-        # Send email with reset_url to the support email address
-        from app import mail
-        msg = Message('Password Reset Request',
-                      sender=current_app.config['MAIL_DEFAULT_SENDER'],
-                      recipients=['alankarengghelp@gmail.com'])
-        msg.body = f'Password reset request for user account: {user.email}\n\nClick the link to reset the password: {reset_url}'
-        mail.send(msg)
+        # Email details
+        user_name = getattr(user, 'name', None) or getattr(user, 'username', None) or "User"
+        subject = f"Password Reset Request for {user_name}"
+
+        # ✅ Send to admin email only
+        admin_email = "alankarengghelp@gmail.com"
+
+        text_content = (
+            f"User {user_name} ({email}) has requested a password reset.\n\n"
+            f"Click this link to reset their password:\n{reset_url}"
+        )
+
+        html_content = f"""
+            <p><b>User:</b> {user_name} ({email})</p>
+            <p>Requested a password reset.</p>
+            <p><a href="{reset_url}" style="color: blue; text-decoration: underline;">
+                Click here to reset their password
+            </a></p>
+            <p>If this wasn't expected, please ignore this message.</p>
+        """
+
+        # Send email asynchronously to admin
+        Thread(
+            target=send_email_async,
+            args=(current_app._get_current_object(), admin_email, subject, html_content, text_content)
+        ).start()
 
         return jsonify({
             'message': 'A password reset link has been sent to the support email. The support team will assist you with your password reset.',
-            'reset_token': reset_token_obj.token,  # Remove in production
-            'reset_url': reset_url  # Remove in production
+            'reset_token': reset_token_obj.token,
+            'reset_url': reset_url
         }), 200
 
     except Exception as e:
         db.session.rollback()
+        print(f"❌ Forgot password error: {e}")
         return jsonify({'error': str(e)}), 500
-
+        
 @auth_bp.route('/auth/reset-password', methods=['POST'])
 def reset_password():
     """Reset user password using token"""
@@ -330,5 +355,3 @@ def get_departments():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-
