@@ -80,6 +80,9 @@ class Employee(db.Model):
     salary_type = db.Column(db.Enum('daily', 'monthly', 'hourly'), default='daily')
     status = db.Column(db.String(20), default='active')  # active, inactive, terminated
     manager_id = db.Column(db.Integer, db.ForeignKey('employees.id'))
+    # New fields for photo and face encoding
+    photo = db.Column(db.Text, nullable=True)  # Base64 encoded photo
+    face_encoding = db.Column(db.Text, nullable=True)  # Serialized face encodings (JSON array)
 
     # Relationships
     manager = db.relationship('Employee', remote_side=[id], backref='subordinates')
@@ -115,6 +118,8 @@ class Employee(db.Model):
             'status': self.status,
             'managerId': self.manager_id,
             'managerName': self.manager.full_name if self.manager else None,
+            'photo': self.photo,
+            'faceEncoding': self.face_encoding,
             'createdAt': self.created_at.isoformat(),
             'updatedAt': self.updated_at.isoformat()
         }
