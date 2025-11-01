@@ -282,135 +282,170 @@ const SalesDepartment = () => {
     }
 };
 
-    const handleCreateOrder = async () => {
-        try {
-            // For Part Load and Company Delivery orders, determine if transport approval is needed
+const handleCreateOrder = async () => {
+    try {
+        // ✅ Validate required fields before submission
+        const requiredFields = [
+            { key: 'customerName', label: 'Customer Name' },
+            { key: 'customerContact', label: 'Customer Contact' },
+            { key: 'customerAddress', label: 'Billing Address' },
+            { key: 'deliveryAddress', label: 'Delivery Address' },
+            { key: 'deliveryType', label: 'Delivery Type' },
+            { key: 'unitPrice', label: 'Unit Price' },
+            { key: 'quantity', label: 'Quantity' },
+            { key: 'salesPerson', label: 'Sales Person' }
+        ];
+
+        for (const field of requiredFields) {
+            const value = orderForm[field.key];
+            if (value === undefined || value === null || value.toString().trim() === '') {
+                toast({
+                    title: 'Missing Information',
+                    description: `${field.label} is required.`,
+                    variant: 'destructive'
+                });
+                return; // stop function if missing any field
+            }
+        }
+
+        // ✅ For Part Load, make sure payment type is selected
+        if (orderForm.deliveryType === 'part load' && !orderForm.paymentType) {
+            toast({
+                title: 'Missing Information',
+                description: 'Please select a payment type for part load delivery.',
+                variant: 'destructive'
+            });
+            return;
+        }
+
+        // For Part Load and Company Delivery orders, determine if transport approval is needed
+        const needsTransportApproval = orderForm.deliveryType === 'part load' || orderForm.deliveryType === 'company delivery';
+        
+        // Set the initial order status based on delivery type
+        const orderPayload = {
+            ...orderForm,
+            orderStatus: needsTransportApproval ? 'pending_transport_approval' : 'pending'
+        };
+        
+        let response;
+        if (isEditingOrder && selectedOrder) {
+            // Update existing order
+            response = await fetch(`${API_BASE}/sales/orders/${selectedOrder.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(orderPayload),
+            });
+        } else {
+            // Create new order
+            response = await fetch(`${API_BASE}/sales/orders`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(orderPayload),
+            });
+        }
+
+        if (response.ok) {
+            const orderData = await response.json();
             const needsTransportApproval = orderForm.deliveryType === 'part load' || orderForm.deliveryType === 'company delivery';
             
-            // Set the initial order status based on delivery type
-            const orderPayload = {
-                ...orderForm,
-                orderStatus: needsTransportApproval ? 'pending_transport_approval' : 'pending'
-            };
-            
-            let response;
-            if (isEditingOrder && selectedOrder) {
-                // Update existing order
-                response = await fetch(`${API_BASE}/sales/orders/${selectedOrder.id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(orderPayload),
-                });
-            } else {
-                // Create new order
-                response = await fetch(`${API_BASE}/sales/orders`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(orderPayload),
-                });
-            }
-
-            if (response.ok) {
-                const orderData = await response.json();
-                const needsTransportApproval = orderForm.deliveryType === 'part load' || orderForm.deliveryType === 'company delivery';
+            if (isEditingOrder) {
+                // Update existing order in the list
+                setSalesOrders(prev => prev.map(order => 
+                    order.id === selectedOrder.id ? orderData : order
+                ));
                 
-                if (isEditingOrder) {
-                    // Update existing order in the list
-                    setSalesOrders(prev => prev.map(order => 
-                        order.id === selectedOrder.id ? orderData : order
-                    ));
+                // Check if delivery type was changed to provide specific feedback
+                const deliveryTypeChanged = selectedOrder.deliveryType !== orderForm.deliveryType;
+                let updateMessage = "Sales order has been updated successfully";
+                
+                if (deliveryTypeChanged) {
+                    const oldType = selectedOrder.deliveryType || 'self delivery';
+                    const newType = orderForm.deliveryType;
                     
-                    // Check if delivery type was changed to provide specific feedback
-                    const deliveryTypeChanged = selectedOrder.deliveryType !== orderForm.deliveryType;
-                    let updateMessage = "Sales order has been updated successfully";
-                    
-                    if (deliveryTypeChanged) {
-                        const oldType = selectedOrder.deliveryType || 'self delivery';
-                        const newType = orderForm.deliveryType;
-                        
-                        if (oldType === 'self delivery' && (newType === 'part load' || newType === 'company delivery')) {
-                            updateMessage = `Delivery type changed to ${newType}. Order status changed to pending transport approval.`;
-                        } else if ((oldType === 'part load' || oldType === 'company delivery') && newType === 'self delivery') {
-                            updateMessage = `Delivery type changed to ${newType}. Pending transport approval requests have been automatically deleted.`;
-                        } else if ((oldType === 'part load' || oldType === 'company delivery') && (newType === 'part load' || newType === 'company delivery')) {
-                            updateMessage = `Delivery type changed from ${oldType} to ${newType}. Transport approval request updated.`;
-                        }
+                    if (oldType === 'self delivery' && (newType === 'part load' || newType === 'company delivery')) {
+                        updateMessage = `Delivery type changed to ${newType}. Order status changed to pending transport approval.`;
+                    } else if ((oldType === 'part load' || oldType === 'company delivery') && newType === 'self delivery') {
+                        updateMessage = `Delivery type changed to ${newType}. Pending transport approval requests have been automatically deleted.`;
+                    } else if ((oldType === 'part load' || oldType === 'company delivery') && (newType === 'part load' || newType === 'company delivery')) {
+                        updateMessage = `Delivery type changed from ${oldType} to ${newType}. Transport approval request updated.`;
                     }
-                    
-                    toast({
-                        title: "Order Updated",
-                        description: updateMessage
-                    });
-                } else {
-                    // Add new order to the list
-                    setSalesOrders(prev => [orderData, ...prev]);
-                    let message = "Sales order has been created successfully";
-                    
-                    // Customize message based on delivery type
-                    switch(orderForm.deliveryType) {
-                        case 'part load':
-                            message = "Order created and sent to Transport Department for approval";
-                            break;
-                        case 'company delivery':
-                            message = "Order created and sent to Transport Department for approval";
-                            break;
-                        case 'free delivery':
-                            message = "Order created and sent for free delivery approval";
-                            break;
-                        default:
-                            message = "Sales order has been created successfully";
-                    }
-                    
-                    toast({
-                        title: "Order Created",
-                        description: message
-                    });
                 }
                 
-                setShowCreateOrderDialog(false);
-                setIsEditingOrder(false);
-                setSelectedOrder(null);
-                setOrderForm({
-                    customerName: '',
-                    customerContact: '',
-                    customerEmail: '',
-                    customerAddress: '',
-                    gstNumber: '',
-                    deliveryAddress: '',
-                    sameAsBilling: false,
-                    showroomProductId: '',
-                    unitPrice: '',
-                    quantity: 1,
-                    discountAmount: 0,
-                    paymentMethod: '',
-                    salesPerson: '',
-                    notes: '',
-                    transportCost: 0,
-                    totalAmount: 0,
-                    deliveryType: 'self delivery'
-                });
-                fetchData(); // Refresh data
-            } else {
-                const error = await response.json();
                 toast({
-                    title: "Error",
-                    description: error.error || "Failed to create order",
-                    variant: "destructive"
+                    title: "Order Updated",
+                    description: updateMessage
+                });
+            } else {
+                // Add new order to the list
+                setSalesOrders(prev => [orderData, ...prev]);
+                let message = "Sales order has been created successfully";
+                
+                // Customize message based on delivery type
+                switch(orderForm.deliveryType) {
+                    case 'part load':
+                        message = "Order created and sent to Transport Department for approval";
+                        break;
+                    case 'company delivery':
+                        message = "Order created and sent to Transport Department for approval";
+                        break;
+                    case 'free delivery':
+                        message = "Order created and sent for free delivery approval";
+                        break;
+                    default:
+                        message = "Sales order has been created successfully";
+                }
+                
+                toast({
+                    title: "Order Created",
+                    description: message
                 });
             }
-        } catch (error) {
-            console.error('Error creating order:', error);
+            
+            setShowCreateOrderDialog(false);
+            setIsEditingOrder(false);
+            setSelectedOrder(null);
+            setOrderForm({
+                customerName: '',
+                customerContact: '',
+                customerEmail: '',
+                customerAddress: '',
+                gstNumber: '',
+                deliveryAddress: '',
+                sameAsBilling: false,
+                showroomProductId: '',
+                unitPrice: '',
+                quantity: 1,
+                discountAmount: 0,
+                paymentMethod: '',
+                salesPerson: '',
+                notes: '',
+                transportCost: 0,
+                totalAmount: 0,
+                deliveryType: 'self delivery'
+            });
+            fetchData(); // Refresh data
+        } else {
+            const error = await response.json();
             toast({
                 title: "Error",
-                description: "Failed to create order",
+                description: error.error || "Failed to create order",
                 variant: "destructive"
             });
         }
-    };
+    } catch (error) {
+        console.error('Error creating order:', error);
+        toast({
+            title: "Error",
+            description: "Failed to create order",
+            variant: "destructive"
+        });
+    }
+};
+
 
     const handleConfirmTransportDemand = async (approvalId, action, agreedAmount = null) => {
         try {
@@ -506,50 +541,6 @@ const SalesDepartment = () => {
         }
     };
 
-    const handleCreateCustomer = async () => {
-        try {
-            const response = await fetch(`${API_BASE}/sales/customers`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(customerForm),
-            });
-
-            if (response.ok) {
-                const newCustomer = await response.json();
-                setCustomers(prev => [newCustomer, ...prev]);
-                setShowCreateCustomerDialog(false);
-                setCustomerForm({
-                    name: '',
-                    contact: '',
-                    email: '',
-                    address: '',
-                    customerType: 'retail',
-                    creditLimit: 0
-                });
-                toast({
-                    title: "Success",
-                    description: "Customer created successfully",
-                });
-            } else {
-                const error = await response.json();
-                toast({
-                    title: "Error",
-                    description: error.error || "Failed to create customer",
-                    variant: "destructive"
-                });
-            }
-        } catch (error) {
-            console.error('Error creating customer:', error);
-            toast({
-                title: "Error",
-                description: "Failed to create customer",
-                variant: "destructive"
-            });
-        }
-    };
-
     const handleVerifyGST = async () => {
         if (!orderForm.gstNumber.trim()) {
             toast({
@@ -622,99 +613,170 @@ const SalesDepartment = () => {
     };
 
     const handleProcessPayment = async () => {
-        try {
-            // Basic validations
-            if (!selectedOrder) {
-                toast({ title: 'Error', description: 'No order selected', variant: 'destructive' });
-                return;
-            }
-            if (Number(paymentForm.totalAmount) <= 0) {
-                toast({ title: 'Error', description: 'Total Amount must be greater than 0', variant: 'destructive' });
-                return;
-            }
-            if (Number(paymentForm.receivedAmount) < 0) {
-                toast({ title: 'Error', description: 'Received Amount cannot be negative', variant: 'destructive' });
-                return;
-            }
-            if (paymentForm.paymentMethod === 'cash') {
-                const denomTotal = Object.entries(paymentForm.denoms).reduce((sum, [note, qty]) => sum + (Number(note) * Number(qty || 0)), 0);
-                if (denomTotal !== Number(paymentForm.receivedAmount)) {
-                    toast({ title: 'Mismatch', description: 'Cash denominations total must equal Received Amount', variant: 'destructive' });
-                    return;
-                }
-            }
-            if (paymentForm.paymentMethod === 'online') {
-                if (!paymentForm.utrNumber) {
-                    toast({ title: 'Missing UTR', description: 'UTR Number is required for Online payments', variant: 'destructive' });
-                    return;
-                }
-            }
-            if (paymentForm.paymentMethod === 'split') {
-                const sum = Number(paymentForm.splitCashAmount || 0) + Number(paymentForm.splitOnlineAmount || 0);
-                if (sum !== Number(paymentForm.receivedAmount)) {
-                    toast({ title: 'Mismatch', description: 'Split cash + online must equal Received Amount', variant: 'destructive' });
-                    return;
-                }
-            }
-            const response = await fetch(`${API_BASE}/sales/orders/${selectedOrder.id}/payment`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    amount: Number(paymentForm.receivedAmount || 0),
-                    paymentMethod: paymentForm.paymentMethod,
-                    utrNumber: paymentForm.utrNumber,
-                    onlinePaymentDate: paymentForm.onlinePaymentDate,
-                    onlineDetails: paymentForm.onlineDetails,
-                    denoms: paymentForm.denoms,
-                    splitCashAmount: paymentForm.splitCashAmount,
-                    splitOnlineAmount: paymentForm.splitOnlineAmount,
-                    handOverTo: paymentForm.handOverTo,
-                    notes: paymentForm.notes
-                }),
-            });
+    try {
+        // ✅ Step 1: Required Field Validations
+        if (!selectedOrder) {
+            toast({ title: 'Error', description: 'No order selected', variant: 'destructive' });
+            return;
+        }
 
-            if (response.ok) {
-                setShowPaymentDialog(false);
-                setPaymentForm({
-                    totalAmount: 0,
-                    receivedAmount: 0,
-                    balanceAmount: 0,
-                    paymentMethod: 'cash',
-                    utrNumber: '',
-                    onlinePaymentDate: '',
-                    onlineDetails: '',
-                    denoms: { 2000: 0, 500: 0, 200: 0, 100: 0, 50: 0, 20: 0, 10: 0, 5: 0, 1: 0 },
-                    cashTotalFromDenoms: 0,
-                    splitCashAmount: 0,
-                    splitOnlineAmount: 0,
-                    notes: ''
-                });
+        if (!paymentForm.totalAmount || Number(paymentForm.totalAmount) <= 0) {
+            toast({ title: 'Error', description: 'Total Amount is required and must be greater than 0', variant: 'destructive' });
+            return;
+        }
+
+        if (paymentForm.receivedAmount === '' || paymentForm.receivedAmount === null || Number(paymentForm.receivedAmount) <= 0) {
+            toast({ title: 'Error', description: 'Received Amount is required and must be greater than 0', variant: 'destructive' });
+            return;
+        }
+
+        if (!paymentForm.paymentMethod) {
+            toast({ title: 'Error', description: 'Payment Method is required', variant: 'destructive' });
+            return;
+        }
+
+        // ✅ Step 2: Conditional Checks based on Payment Method
+        if (paymentForm.paymentMethod === 'cash') {
+            const denomTotal = Object.entries(paymentForm.denoms).reduce(
+                (sum, [note, qty]) => sum + (Number(note) * Number(qty || 0)),
+                0
+            );
+
+            if (denomTotal !== Number(paymentForm.receivedAmount)) {
                 toast({
-                    title: "Success",
-                    description: "Payment processed successfully , Sent to Finance for cheak",
+                    title: 'Mismatch',
+                    description: 'Cash denominations total must equal Received Amount',
+                    variant: 'destructive'
                 });
-                fetchData(); // Refresh data
-            } else {
-                const error = await response.json();
-                toast({
-                    title: "Error",
-                    description: error.error || "Failed to process payment",
-                    variant: "destructive"
-                });
+                return;
             }
-        } catch (error) {
-            console.error('Error processing payment:', error);
+        }
+
+        if (paymentForm.paymentMethod === 'online') {
+            if (!paymentForm.utrNumber || paymentForm.utrNumber.trim() === '') {
+                toast({
+                    title: 'Missing UTR',
+                    description: 'UTR Number is required for Online payments',
+                    variant: 'destructive'
+                });
+                return;
+            }
+            if (!paymentForm.onlinePaymentDate) {
+                toast({
+                    title: 'Missing Date',
+                    description: 'Online Payment Date is required for Online payments',
+                    variant: 'destructive'
+                });
+                return;
+            }
+        }
+
+        if (paymentForm.paymentMethod === 'split') {
+            const splitCash = Number(paymentForm.splitCashAmount || 0);
+            const splitOnline = Number(paymentForm.splitOnlineAmount || 0);
+            const totalSplit = splitCash + splitOnline;
+
+            if (totalSplit !== Number(paymentForm.receivedAmount)) {
+                toast({
+                    title: 'Mismatch',
+                    description: 'Split Cash + Online amounts must equal Received Amount',
+                    variant: 'destructive'
+                });
+                return;
+            }
+
+            if (splitOnline > 0) {
+                if (!paymentForm.utrNumber || paymentForm.utrNumber.trim() === '') {
+                    toast({
+                        title: 'Missing UTR',
+                        description: 'UTR Number is required for the Online portion of Split payments',
+                        variant: 'destructive'
+                    });
+                    return;
+                }
+                if (!paymentForm.onlinePaymentDate) {
+                    toast({
+                        title: 'Missing Date',
+                        description: 'Online Payment Date is required for the Online portion of Split payments',
+                        variant: 'destructive'
+                    });
+                    return;
+                }
+            }
+
+            // Validate denominations for cash portion
+            const denomTotal = Object.entries(paymentForm.denoms).reduce(
+                (sum, [note, qty]) => sum + (Number(note) * Number(qty || 0)),
+                0
+            );
+            if (denomTotal !== splitCash) {
+                toast({
+                    title: 'Mismatch',
+                    description: 'Cash denominations total must equal Split Cash Amount',
+                    variant: 'destructive'
+                });
+                return;
+            }
+        }
+
+        // ✅ Step 3: Proceed with original payment process
+        const response = await fetch(`${API_BASE}/sales/orders/${selectedOrder.id}/payment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                amount: Number(paymentForm.receivedAmount || 0),
+                paymentMethod: paymentForm.paymentMethod,
+                utrNumber: paymentForm.utrNumber,
+                onlinePaymentDate: paymentForm.onlinePaymentDate,
+                onlineDetails: paymentForm.onlineDetails,
+                denoms: paymentForm.denoms,
+                splitCashAmount: paymentForm.splitCashAmount,
+                splitOnlineAmount: paymentForm.splitOnlineAmount,
+                handOverTo: paymentForm.handOverTo,
+                notes: paymentForm.notes
+            }),
+        });
+
+        if (response.ok) {
+            setShowPaymentDialog(false);
+            setPaymentForm({
+                totalAmount: 0,
+                receivedAmount: 0,
+                balanceAmount: 0,
+                paymentMethod: 'cash',
+                utrNumber: '',
+                onlinePaymentDate: '',
+                onlineDetails: '',
+                denoms: { 2000: 0, 500: 0, 200: 0, 100: 0, 50: 0, 20: 0, 10: 0, 5: 0, 1: 0 },
+                cashTotalFromDenoms: 0,
+                splitCashAmount: 0,
+                splitOnlineAmount: 0,
+                notes: ''
+            });
+            toast({
+                title: "Success",
+                description: "Payment processed successfully , Sent to Finance for check",
+            });
+            fetchData(); // Refresh data
+        } else {
+            const error = await response.json();
             toast({
                 title: "Error",
-                description: "Failed to process payment",
+                description: error.error || "Failed to process payment",
                 variant: "destructive"
             });
         }
-    };
-
-
+    } catch (error) {
+        console.error('Error processing payment:', error);
+        toast({
+            title: "Error",
+            description: "Failed to process payment",
+            variant: "destructive"
+        });
+    }
+};
 
     const getStatusBadge = (status) => {
         const statusConfig = {
@@ -1864,90 +1926,6 @@ const SalesDepartment = () => {
                         </Button>
                         <Button onClick={handleCreateOrder} className="bg-blue-600 hover:bg-blue-700">
                             {isEditingOrder ? 'Update Order' : 'Create Order'}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Create Customer Dialog */}
-            <Dialog open={showCreateCustomerDialog} onOpenChange={setShowCreateCustomerDialog}>
-                <DialogContent className="bg-gray-900 border-gray-200 text-gray-800">
-                    <DialogHeader>
-                        <DialogTitle>Add New Customer</DialogTitle>
-                        <DialogDescription>Add a new customer to the system</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label htmlFor="customerName">Name *</Label>
-                                <Input
-                                    id="customerName"
-                                    value={customerForm.name}
-                                    onChange={(e) => setCustomerForm(prev => ({ ...prev, name: e.target.value }))}
-                                    className="bg-gray-800 border-gray-200 text-gray-800"
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="customerContact">Contact</Label>
-                                <Input
-                                    id="customerContact"
-                                    value={customerForm.contact}
-                                    onChange={(e) => setCustomerForm(prev => ({ ...prev, contact: e.target.value }))}
-                                    className="bg-gray-800 border-gray-200 text-gray-800"
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label htmlFor="customerEmail">Email</Label>
-                                <Input
-                                    id="customerEmail"
-                                    type="email"
-                                    value={customerForm.email}
-                                    onChange={(e) => setCustomerForm(prev => ({ ...prev, email: e.target.value }))}
-                                    className="bg-gray-800 border-gray-200 text-gray-800"
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="customerType">Customer Type</Label>
-                                <Select value={customerForm.customerType} onValueChange={(value) => setCustomerForm(prev => ({ ...prev, customerType: value }))}>
-                                    <SelectTrigger className="bg-gray-800 border-gray-200 text-gray-800">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-gray-800 border-gray-200">
-                                        <SelectItem value="retail">Retail</SelectItem>
-                                        <SelectItem value="wholesale">Wholesale</SelectItem>
-                                        <SelectItem value="corporate">Corporate</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <div>
-                            <Label htmlFor="customerAddress">Address</Label>
-                            <Textarea
-                                id="customerAddress"
-                                value={customerForm.address}
-                                onChange={(e) => setCustomerForm(prev => ({ ...prev, address: e.target.value }))}
-                                className="bg-gray-800 border-gray-200 text-gray-800"
-                            />
-                        </div>
-                        <div>
-                            <Label htmlFor="creditLimit">Credit Limit</Label>
-                            <Input
-                                id="creditLimit"
-                                type="number"
-                                value={customerForm.creditLimit}
-                                onChange={(e) => setCustomerForm(prev => ({ ...prev, creditLimit: parseFloat(e.target.value) || 0 }))}
-                                className="bg-gray-800 border-gray-200 text-gray-800"
-                            />
-                        </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowCreateCustomerDialog(false)}>
-                            Cancel
-                        </Button>
-                        <Button onClick={handleCreateCustomer} className="bg-blue-600 hover:bg-blue-700">
-                            Add Customer
                         </Button>
                     </DialogFooter>
                 </DialogContent>
