@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,8 @@ import {
   Plus, Edit, Trash2, X, Search, Filter, Download,
   Clock, CheckCircle, XCircle, Eye, FileText,Building2,
   Building, Phone, Mail, MapPin, User, Briefcase,
-  ArrowLeft, RefreshCw, AlertCircle, Save, Calendar as CalendarIcon
+  ArrowLeft, RefreshCw, AlertCircle, Save, Calendar as CalendarIcon,
+  Camera
 } from 'lucide-react';
 import { API_BASE } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
@@ -82,6 +83,122 @@ const HRDepartment = () => {
       status,
       fullName: (employee.fullName || employee.name || `${firstName} ${lastName}`).trim()
     };
+  };
+
+  // Camera capture states
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const [streamRef, setStreamRef] = useState(null);
+  const [capturedPhotos, setCapturedPhotos] = useState([]);
+  const [recognitionStatus, setRecognitionStatus] = useState('System Ready');
+  const [cameraError, setCameraError] = useState(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+
+  // Camera functions
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: 'user' }
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+        setStreamRef(stream);
+        setIsCameraActive(true);
+        setCameraError(null);
+      }
+    } catch (err) {
+      console.error('Failed to start camera:', err);
+      setCameraError('Failed to access camera. Please ensure camera permissions are granted.');
+      setIsCameraActive(false);
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef) {
+      const tracks = streamRef.getTracks();
+      tracks.forEach(track => track.stop());
+      setStreamRef(null);
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsCameraActive(false);
+    setCameraError(null);
+  };
+
+  // Capture photo from video feed
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) {
+      console.warn('Video or canvas ref not available');
+      return null;
+    }
+    
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    
+    if (video.readyState < 2) {
+      console.warn(`Video not ready. readyState=${video.readyState}`);
+      return null;
+    }
+    
+    if (!video.videoWidth || !video.videoHeight) {
+      console.warn('Video dimensions invalid', {
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight
+      });
+      return null;
+    }
+    
+    try {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const photoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      return photoDataUrl;
+    } catch (err) {
+      console.error('Error during capture:', err);
+      return null;
+    }
+  };
+
+  // Capture multiple photos for face recognition
+  const captureMultiplePhotos = async (numPhotos = 7, intervalMs = 400) => {
+    let photos = [];
+    const maxRetries = 3;
+    
+    for (let i = 0; i < numPhotos; i++) {
+      let photo = null;
+      let attempts = 0;
+      
+      while (!photo && attempts < maxRetries) {
+        attempts++;
+        
+        if (videoRef.current && videoRef.current.paused) {
+          try {
+            videoRef.current.play();
+          } catch (e) {
+            console.warn('Could not resume video');
+          }
+        }
+        
+        photo = capturePhoto();
+        
+        if (!photo && attempts < maxRetries) {
+          await new Promise(res => setTimeout(res, 150 + (attempts * 50)));
+        }
+      }
+      
+      if (photo) {
+        photos.push(photo);
+        setRecognitionStatus(`✅ Photo ${i + 1}/${numPhotos} captured`);
+      }
+      
+      await new Promise(res => setTimeout(res, intervalMs));
+    }
+    
+    return photos;
   };
 
   // Form states
@@ -210,7 +327,8 @@ const HRDepartment = () => {
         status: normalized.status || 'active',
         dateOfBirth: normalized.dateOfBirth || normalized.date_of_birth || '',
         gender: normalized.gender || '',
-        managerId: normalized.managerId ? normalized.managerId.toString() : null
+        managerId: normalized.managerId ? normalized.managerId.toString() : null,
+        photo: employee.photo || normalized.photo || ''
       };
       setModalFormData(formData);
     } else if (type === 'jobPosting' || type === 'editJobPosting' || type === 'viewJobPosting') {
@@ -299,11 +417,23 @@ const HRDepartment = () => {
             salaryType: modalFormData.salaryType,
             status: modalFormData.status,
             dateOfBirth: modalFormData.dateOfBirth,
-            gender: modalFormData.gender
+            gender: modalFormData.gender,
+            photos: modalFormData.photos || undefined, // Send all captured photos
+            photo: modalFormData.photo || undefined // Send first photo for preview
           };
 
           if (modalFormData.managerId !== null && modalFormData.managerId !== '') {
             payload.managerId = modalFormData.managerId;
+          }
+
+          // Validate photos for new employee
+          if (modalType === 'addEmployee' && (!payload.photos || !Array.isArray(payload.photos) || payload.photos.length < 3)) {
+            toast({
+              title: "Missing Photos",
+              description: "Please capture face photos using the camera. Multiple photos are required for accurate face recognition.",
+              variant: "destructive"
+            });
+            return;
           }
 
           const url = modalType === 'addEmployee' ? `${API_BASE}/hr/employees` : `${API_BASE}/hr/employees/${selectedEmployee.id}`;
@@ -2573,6 +2703,14 @@ const DashboardView = ({ employees = [] }) => {  // ✅ Accept employees as prop
                     <Label>Address</Label>
                     <p className="text-sm text-gray-600 whitespace-pre-line">{modalFormData.address || '—'}</p>
                   </div>
+                  <div className="col-span-2">
+                    <Label>Photo</Label>
+                    {modalFormData.photo ? (
+                      <img src={modalFormData.photo} alt="Employee Photo" className="w-32 h-32 object-cover rounded border" />
+                    ) : (
+                      <span className="text-gray-400">No photo available</span>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -2580,6 +2718,110 @@ const DashboardView = ({ employees = [] }) => {  // ✅ Accept employees as prop
             {(modalType === 'addEmployee' || modalType === 'editEmployee') && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <Label htmlFor="photo">Photo Capture (for face recognition)</Label>
+                    <div className="space-y-4">
+                      {/* Camera preview */}
+                      <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
+                        <video
+                          ref={videoRef}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="w-full h-full object-cover"
+                        />
+                        <canvas ref={canvasRef} className="hidden" />
+                        
+                        {!isCameraActive && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-gray-900/80">
+                            <div className="text-center text-white">
+                              <Camera className="w-12 h-12 mx-auto mb-2 text-gray-400" />
+                              <p className="text-sm">Click "Start Camera" to begin</p>
+                              {cameraError && (
+                                <p className="text-red-400 text-xs mt-2">{cameraError}</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Camera controls */}
+                      <div className="flex justify-between gap-4">
+                        {!isCameraActive ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="flex-1"
+                            onClick={startCamera}
+                          >
+                            <Camera className="w-4 h-4 mr-2" />
+                            Start Camera
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              type="button"
+                              variant="default"
+                              className="flex-1 bg-green-600 hover:bg-green-700"
+                              onClick={async () => {
+                                setRecognitionStatus('Capturing photos...');
+                                const photos = await captureMultiplePhotos();
+                                if (photos && photos.length > 0) {
+                                  setModalFormData(prev => ({
+                                    ...prev,
+                                    photo: photos[0],
+                                    photos: photos
+                                  }));
+                                  stopCamera();
+                                  toast({
+                                    title: "Photos Captured",
+                                    description: `Successfully captured ${photos.length} photos for face recognition`,
+                                  });
+                                }
+                              }}
+                            >
+                              <Camera className="w-4 h-4 mr-2" />
+                              Capture Photos
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={stopCamera}
+                            >
+                              <X className="w-4 h-4 mr-2" />
+                              Stop Camera
+                            </Button>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Recognition status */}
+                      <p className="text-sm text-gray-600">{recognitionStatus}</p>
+
+                      {/* Preview captured photo */}
+                      {modalFormData.photo && (
+                        <div className="relative">
+                          <img
+                            src={modalFormData.photo}
+                            alt="Preview"
+                            className="w-32 h-32 object-cover rounded border mt-2"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="absolute top-4 right-4"
+                            onClick={() => {
+                              setModalFormData(prev => ({ ...prev, photo: null, photos: null }));
+                              setRecognitionStatus('System Ready');
+                            }}
+                          >
+                            Retake
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                   <div>
                     <Label htmlFor="firstName">First Name</Label>
                     <Input
@@ -2625,10 +2867,17 @@ const DashboardView = ({ employees = [] }) => {  // ✅ Accept employees as prop
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="IT">IT</SelectItem>
-                        <SelectItem value="HR">HR</SelectItem>
-                        <SelectItem value="Sales">Sales</SelectItem>
-                        <SelectItem value="Marketing">Marketing</SelectItem>
-                        <SelectItem value="Finance">Finance</SelectItem>
+                    <SelectItem value="HR">HR</SelectItem>
+                    <SelectItem value="Sales">Sales</SelectItem>
+                    <SelectItem value="Finance">Finance</SelectItem>
+                    <SelectItem value="Production">Production</SelectItem>
+                    <SelectItem value="Purchase">Purchase</SelectItem>
+                    <SelectItem value="Assembly">Assembly</SelectItem>
+                    <SelectItem value="Showroom">Showroom</SelectItem>
+                    <SelectItem value="Store">Store</SelectItem>
+                    <SelectItem value="Transport">Transport</SelectItem>
+                    <SelectItem value="Dispatch">Dispatch</SelectItem>
+                    <SelectItem value="Security">Security</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
