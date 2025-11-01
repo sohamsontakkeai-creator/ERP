@@ -281,6 +281,26 @@ class HRService:
                     value = value.lower()
                 setattr(employee, db_field, value)
 
+        # If employee status is being updated, also update corresponding GateUser status
+        if 'status' in employee_data:
+            new_status = employee_data['status']
+            # Import GateUser here to avoid circular imports
+            from models.gate_entry import GateUser
+
+            # Find GateUser by phone number (assuming phone is used as the link)
+            if employee.phone:
+                gate_user = GateUser.query.filter_by(phone=employee.phone).first()
+                if gate_user:
+                    # Map employee status to gate user status
+                    if new_status == 'inactive':
+                        gate_user.status = 'inactive'
+                    elif new_status == 'active':
+                        gate_user.status = 'active'
+                    elif new_status == 'terminated':
+                        gate_user.status = 'blocked'
+                    # Commit the gate user status change
+                    db.session.commit()
+
         db.session.commit()
         return employee.to_dict()
 
