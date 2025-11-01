@@ -49,7 +49,10 @@ class GateEntryService:
             df.to_excel(self.users_file, index=False)
 
     def register_user(self, name: str, phone: str, photo: str = None) -> Dict:
-        """Register a new user for gate entry system"""
+        """
+        [DEPRECATED] Register a new user for gate entry system (Excel-based).
+        Registration is now handled by HR and this method should not be used.
+        """
         try:
             # Read existing users
             df = pd.read_excel(self.users_file)
