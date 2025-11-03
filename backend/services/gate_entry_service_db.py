@@ -39,7 +39,10 @@ class GateEntryServiceDB:
         self.attendance_service = AttendanceIntegrationService()
     
     def register_user(self, name: str, phone: str, photos: list = None, face_encoding: str = None) -> Dict:
-        """Register a new user for gate entry system (multi-photo)"""
+        """
+        Register a new user for gate entry system (multi-photo).
+        NOTE: This is now only called from HR registration, not directly from gate entry routes.
+        """
         try:
             # Check if user already exists
             existing_user = GateUser.query.filter_by(phone=phone).first()
@@ -346,7 +349,6 @@ class GateEntryServiceDB:
     def manual_entry(self, user_phone: str, details: str = "", override_cooling: bool = False) -> Dict:
         """Record manual entry for a user"""
         try:
-            # Get user
             user = self.get_user_by_phone(user_phone)
             if not user:
                 return {
@@ -354,10 +356,18 @@ class GateEntryServiceDB:
                     'message': 'User not found. Please register first.'
                 }
             
+            status_value = (user.status or '').strip().lower()
+            if status_value != 'active':
+                block_message = "The employee is Blocked, can't enter"
+                return {
+                    'success': False,
+                    'message': block_message,
+                    'status': 'BLOCKED'
+                }
+            
             now = datetime.now()
             today = now.date()
             
-            # Check user status
             user_status, has_exited_today, last_action_time = self.get_user_status_and_history(user)
             
             # Check cooling period
