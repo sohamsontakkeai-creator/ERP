@@ -68,6 +68,11 @@ def manual_entry():
     if not phone:
         return jsonify({'success': False, 'message': 'Phone is required'}), 400
     
+    user = gate_entry_service_db.get_user_by_phone(phone)
+    if user and (user.status or '').strip().lower() != 'active':
+        block_message = "The employee is Blocked, can't enter"
+        return jsonify({'success': False, 'message': block_message, 'status': 'BLOCKED'}), 400
+    
     result = gate_entry_service_db.manual_entry(phone, details, override_cooling)
     
     if result['success']:
@@ -337,6 +342,17 @@ def recognize_face():
         user = GateUser.query.get(result['user_id'])
         if not user:
             return jsonify({'success': False, 'message': 'User not found'}), 404
+        
+        status_value = (user.status or '').strip().lower()
+        if action == 'entry' and status_value != 'active':
+            block_message = "The employee is Blocked, can't enter"
+            return jsonify({
+                'success': False,
+                'recognized': True,
+                'user': user.to_dict(),
+                'message': block_message,
+                'status': 'BLOCKED'
+            }), 400
         
         # Perform entry or exit
         # Calculate confidence: lower distance = higher confidence
