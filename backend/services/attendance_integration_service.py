@@ -40,11 +40,12 @@ class AttendanceIntegrationService:
                 }
             
             # Check if employee is active
-            if employee.status.lower() != 'active':
+            status_value = (employee.status or '').strip().lower()
+            if status_value != 'active':
                 logger.warning(f"Employee {employee.full_name} is not active (status: {employee.status})")
                 return {
                     'success': False,
-                    'message': f'Employee is {employee.status} - attendance not marked',
+                    'message': "The employee is Blocked, can't enter",
                     'is_employee': True,
                     'employee_status': employee.status
                 }
