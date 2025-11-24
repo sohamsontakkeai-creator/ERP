@@ -51,7 +51,7 @@ def create_app(config_name=None):
     CORS(
         app,
         origins=[
-            "https://erp-ct75.vercel.app/auth",
+            "https://erp-ct75.vercel.app",
             "https://*.vercel.app",  # allows preview URLs
             "http://localhost:5173",  # for local testing
         ],
