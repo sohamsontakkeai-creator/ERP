@@ -10,8 +10,10 @@ import { AutoRefreshIndicator } from '@/components/AutoRefreshIndicator';
 const ManagementAlerts = () => {
   const [onLeaveToday, setOnLeaveToday] = useState([]);
   const [pendingPayments, setPendingPayments] = useState([]);
+  const [employeesOnTour, setEmployeesOnTour] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [tourDate, setTourDate] = useState(new Date().toISOString().split('T')[0]);
 
   const fetchAlerts = async () => {
     setLoading(true);
@@ -21,6 +23,9 @@ const ManagementAlerts = () => {
       
       // Fetch pending payment reminders
       await fetchPendingPayments();
+      
+      // Fetch employees on tour
+      await fetchEmployeesOnTour();
     } catch (error) {
       console.error('Error fetching alerts:', error);
       toast({
@@ -82,9 +87,29 @@ const ManagementAlerts = () => {
     }
   };
 
+  const fetchEmployeesOnTour = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/hr/tours/employees-on-tour?date=${tourDate}`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Employees on tour data:', data);
+        setEmployeesOnTour(data.employees || []);
+      }
+    } catch (error) {
+      console.error('Error fetching employees on tour:', error);
+      setEmployeesOnTour([]);
+    }
+  };
+
   useEffect(() => {
     fetchAlerts();
   }, []);
+
+  useEffect(() => {
+    if (tourDate) {
+      fetchEmployeesOnTour();
+    }
+  }, [tourDate]);
 
   // Auto-refresh every 10 seconds
   const { isRefreshing: autoRefreshing, lastRefreshTime, isPaused } = useAutoRefresh(
@@ -261,8 +286,78 @@ const ManagementAlerts = () => {
         </CardContent>
       </Card>
 
+      {/* Employees on Tour Section */}
+      <Card className="border-2 border-purple-200 shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-6 w-6" />
+            Employees on Tour
+            {employeesOnTour.length > 0 && (
+              <Badge className="ml-2 bg-white text-purple-600 font-bold">
+                {employeesOnTour.length} On Tour
+              </Badge>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-white- mb-2">Select Date</label>
+            <input
+              type="date"
+              value={tourDate}
+              onChange={(e) => setTourDate(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white text-gray-900"
+            />
+          </div>
+          
+          {employeesOnTour.length === 0 ? (
+            <div className="text-center p-8 bg-gray-50 rounded-lg">
+              <Calendar className="w-12 h-12 text-black-400 mx-auto mb-3" />
+              <p className="text-gray-600 font-medium">No employees on tour for this date</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto border border-gray-200 rounded-lg">
+              <table className="w-full bg-white">
+                <thead className="bg-gray-100">
+                  <tr className="border-b border-gray-300">
+                    <th className="p-3 text-left text-gray-900 font-bold">Employee Name</th>
+                    <th className="p-3 text-left text-gray-900 font-bold">Destination</th>
+                    <th className="p-3 text-left text-gray-900 font-bold">Purpose</th>
+                    <th className="p-3 text-left text-gray-900 font-bold">Start Date</th>
+                    <th className="p-3 text-left text-gray-900 font-bold">End Date</th>
+                    <th className="p-3 text-left text-gray-900 font-bold">Duration</th>
+                    <th className="p-3 text-left text-gray-900 font-bold">Travel Mode</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white">
+                  {employeesOnTour.map((tour) => (
+                    <tr key={tour.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="p-3 text-gray-900 font-medium">{tour.employeeName}</td>
+                      <td className="p-3 text-gray-900">{tour.destination}</td>
+                      <td className="p-3 text-gray-700 text-sm">{tour.tourPurpose}</td>
+                      <td className="p-3 text-gray-700">
+                        {new Date(tour.startDate).toLocaleDateString()}
+                      </td>
+                      <td className="p-3 text-gray-700">
+                        {new Date(tour.endDate).toLocaleDateString()}
+                      </td>
+                      <td className="p-3">
+                        <Badge className="bg-purple-100 text-purple-800">
+                          {tour.durationDays} {tour.durationDays === 1 ? 'day' : 'days'}
+                        </Badge>
+                      </td>
+                      <td className="p-3 text-gray-700 capitalize">{tour.travelMode || 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="border-2 border-blue-200 bg-white">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -271,6 +366,18 @@ const ManagementAlerts = () => {
                 <p className="text-3xl font-bold text-blue-600">{onLeaveToday.length}</p>
               </div>
               <Users className="h-12 w-12 text-blue-600 opacity-20" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-purple-200 bg-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 font-medium">Employees on Tour</p>
+                <p className="text-3xl font-bold text-purple-600">{employeesOnTour.length}</p>
+              </div>
+              <Calendar className="h-12 w-12 text-purple-600 opacity-20" />
             </div>
           </CardContent>
         </Card>
