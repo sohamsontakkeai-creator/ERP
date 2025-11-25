@@ -634,7 +634,7 @@ class SalesService:
             
             return {
                 'status': 'approval_requested',
-                'message': 'Coupon applied. Approval request sent to admin.',
+                'message': 'Coupon applied. Approval request sent to Management.',
                 'salesOrder': sales_order.to_dict(),
                 'approvalRequest': approval_result.get('approvalRequest')
             }
