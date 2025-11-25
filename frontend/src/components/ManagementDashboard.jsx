@@ -92,7 +92,7 @@ const UserManagement = () => {
       await updateUserDepartment(userId, newDepartment);
       toast({
         title: "Department Updated",
-        description: "User department has been successfully updated.",
+        description: "User department has been successfully updated. The user will be logged out automatically if they are currently logged in.",
       });
       loadAllUsers();
     } catch (error) {
