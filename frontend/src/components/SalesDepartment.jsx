@@ -1961,6 +1961,11 @@ const handleDeliveryTypeChange = async () => {
                                         Customer: {reminder.customerName}
                                     </p>
                                     <p className="text-sm text-gray-600">
+                                        Salesperson: <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-xs font-medium">
+                                            {reminder.salesPerson || 'N/A'}
+                                        </span>
+                                    </p>
+                                    <p className="text-sm text-gray-600">
                                         Amount: ₹{reminder.finalAmount?.toLocaleString()}
                                     </p>
                                     <p className="text-sm text-gray-600">
