@@ -136,71 +136,6 @@ const ManagementAlerts = () => {
         lastRefreshTime={lastRefreshTime}
         isPaused={isPaused}
       />
-      {/* On Leave Section with Date Picker */}
-      <Card className="border-2 border-blue-200 shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-6 w-6" />
-              Employees On Leave
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="px-3 py-1 rounded border border-white/30 bg-white/20 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/50"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-6">
-          {onLeaveToday.length === 0 ? (
-            <div className="text-center p-8 bg-gray-50 rounded-lg">
-              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600 font-medium">
-                No employees on leave on {new Date(selectedDate).toLocaleDateString()}
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto border border-gray-200 rounded-lg">
-              <table className="w-full bg-white">
-                <thead className="bg-gray-100">
-                  <tr className="border-b border-gray-300">
-                    <th className="p-3 text-left text-gray-900 font-bold">Employee Name</th>
-                    <th className="p-3 text-left text-gray-900 font-bold">Leave Type</th>
-                    <th className="p-3 text-left text-gray-900 font-bold">Start Date</th>
-                    <th className="p-3 text-left text-gray-900 font-bold">End Date</th>
-                    <th className="p-3 text-left text-gray-900 font-bold">Days</th>
-                    <th className="p-3 text-left text-gray-900 font-bold">Reason</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white">
-                  {onLeaveToday.map((leave) => (
-                    <tr key={leave.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="p-3 text-gray-900 font-medium">{leave.employeeName}</td>
-                      <td className="p-3">
-                        <Badge className="capitalize bg-blue-100 text-blue-800">
-                          {leave.leaveType}
-                        </Badge>
-                      </td>
-                      <td className="p-3 text-gray-700">
-                        {new Date(leave.startDate).toLocaleDateString()}
-                      </td>
-                      <td className="p-3 text-gray-700">
-                        {new Date(leave.endDate).toLocaleDateString()}
-                      </td>
-                      <td className="p-3 text-gray-700">{leave.daysRequested} days</td>
-                      <td className="p-3 text-gray-600 text-sm">{leave.reason || 'N/A'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Pending Payment Reminders Section */}
       <Card className="border-2 border-red-200 shadow-lg">
@@ -285,6 +220,73 @@ const ManagementAlerts = () => {
           )}
         </CardContent>
       </Card>
+      
+      {/* On Leave Section with Date Picker */}
+      <Card className="border-2 border-blue-200 shadow-lg">
+        <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-6 w-6" />
+              Employees On Leave
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="px-3 py-1 rounded border border-white/30 bg-white/20 text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/50"
+              />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          {onLeaveToday.length === 0 ? (
+            <div className="text-center p-8 bg-gray-50 rounded-lg">
+              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+              <p className="text-gray-600 font-medium">
+                No employees on leave on {new Date(selectedDate).toLocaleDateString()}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto border border-gray-200 rounded-lg">
+              <table className="w-full bg-white">
+                <thead className="bg-gray-100">
+                  <tr className="border-b border-gray-300">
+                    <th className="p-3 text-left text-gray-900 font-bold">Employee Name</th>
+                    <th className="p-3 text-left text-gray-900 font-bold">Leave Type</th>
+                    <th className="p-3 text-left text-gray-900 font-bold">Start Date</th>
+                    <th className="p-3 text-left text-gray-900 font-bold">End Date</th>
+                    <th className="p-3 text-left text-gray-900 font-bold">Days</th>
+                    <th className="p-3 text-left text-gray-900 font-bold">Reason</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white">
+                  {onLeaveToday.map((leave) => (
+                    <tr key={leave.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="p-3 text-gray-900 font-medium">{leave.employeeName}</td>
+                      <td className="p-3">
+                        <Badge className="capitalize bg-blue-100 text-blue-800">
+                          {leave.leaveType}
+                        </Badge>
+                      </td>
+                      <td className="p-3 text-gray-700">
+                        {new Date(leave.startDate).toLocaleDateString()}
+                      </td>
+                      <td className="p-3 text-gray-700">
+                        {new Date(leave.endDate).toLocaleDateString()}
+                      </td>
+                      <td className="p-3 text-gray-700">{leave.daysRequested} days</td>
+                      <td className="p-3 text-gray-600 text-sm">{leave.reason || 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
 
       {/* Employees on Tour Section */}
       <Card className="border-2 border-purple-200 shadow-lg">
