@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
+import React, { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -423,6 +423,16 @@ const HRDepartment = () => {
         
         if (!modalFormData.firstName || !modalFormData.lastName || !modalFormData.email || !modalFormData.department || !finalDesignation || !modalFormData.joiningDate) {
           toast({ title: "Missing Information", description: "First name, last name, email, department, designation, and joining date are required.", variant: "destructive" });
+          return;
+        }
+        
+        // Email validation - must contain @
+        if (!modalFormData.email.includes('@')) {
+          toast({ 
+            title: "Invalid Email", 
+            description: "Please include an '@' in the email address. '" + modalFormData.email + "' is missing an '@'.", 
+            variant: "destructive" 
+          });
           return;
         }
         
@@ -3008,6 +3018,9 @@ const DashboardView = ({ employees = [] }) => {  // ✅ Accept employees as prop
                       value={modalFormData.email || ''}
                       className="bg-white text-gray-900 border-gray-300"
                       onChange={(e) => setModalFormData({...modalFormData, email: e.target.value})}
+                      required
+                      pattern="[^@\s]+@[^@\s]+\.[^@\s]+"
+                      title="Please enter a valid email address with @ symbol"
                     />
                   </div>
                   <div>
