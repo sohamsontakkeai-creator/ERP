@@ -3,7 +3,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Building2, ClipboardCheck, Eye, UserCheck, UserX, RefreshCw, AlertCircle, FileText, Users, Search, LogOut, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from '@/components/ui/use-toast';
@@ -241,6 +243,9 @@ const ManagementDashboard = () => {
   const navigate = useNavigate();
   const [pendingUsers, setPendingUsers] = useState([]);
   const [showGuestDialog, setShowGuestDialog] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [pendingApprovalId, setPendingApprovalId] = useState(null);
   const [orderApprovals, setOrderApprovals] = useState([]);
   const [leaveApprovals, setLeaveApprovals] = useState([]);
   const [tourApprovals, setTourApprovals] = useState([]);
@@ -365,6 +370,62 @@ const ManagementDashboard = () => {
       toast({
         title: "Rejection Failed",
         description: error.message || "An error occurred while rejecting the user.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleApproveOrderClick = (approvalId, requestType) => {
+    // Check if it's a free delivery or coupon bypass request - require password
+    if (requestType === 'free_delivery' || requestType === 'coupon_applied') {
+      setPendingApprovalId(approvalId);
+      setPasswordInput('');
+      setShowPasswordDialog(true);
+    } else {
+      // For other approvals, proceed directly
+      handleApproveOrder(approvalId);
+    }
+  };
+
+  const handlePasswordSubmit = async () => {
+    if (!passwordInput) {
+      toast({
+        title: "Password Required",
+        description: "Please enter your password to approve free delivery.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Verify password
+      const verifyResponse = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ 
+          username: user?.username,
+          password: passwordInput
+        })
+      });
+
+      if (!verifyResponse.ok) {
+        throw new Error('Invalid password');
+      }
+
+      // Password is correct, proceed with approval
+      await handleApproveOrder(pendingApprovalId);
+      
+      // Close dialog and reset
+      setShowPasswordDialog(false);
+      setPasswordInput('');
+      setPendingApprovalId(null);
+      
+    } catch (error) {
+      toast({
+        title: "Authentication Failed",
+        description: "Invalid password. Please try again.",
         variant: "destructive"
       });
     }
@@ -947,7 +1008,7 @@ const ManagementDashboard = () => {
                                       <Button
                                         size="sm"
                                         className="bg-green-600 hover:bg-green-700 text-white"
-                                        onClick={() => handleApproveOrder(approval.id)}
+                                        onClick={() => handleApproveOrderClick(approval.id, approval.requestType)}
                                       >
                                         ✓ Approve
                                       </Button>
@@ -1022,7 +1083,7 @@ const ManagementDashboard = () => {
                                       <Button
                                         size="sm"
                                         className="bg-green-600 hover:bg-green-700 text-white"
-                                        onClick={() => handleApproveOrder(approval.id)}
+                                        onClick={() => handleApproveOrderClick(approval.id, approval.requestType)}
                                       >
                                         ✓ Approve
                                       </Button>
@@ -1389,6 +1450,54 @@ const ManagementDashboard = () => {
         open={showGuestDialog} 
         onOpenChange={setShowGuestDialog}
       />
+
+      {/* Password Verification Dialog for Approvals */}
+      <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Password Verification Required</DialogTitle>
+            <DialogDescription>
+              Please enter your password to approve this request. This is required for coupon bypass and free delivery approvals.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handlePasswordSubmit();
+                  }
+                }}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPasswordDialog(false);
+                setPasswordInput('');
+                setPendingApprovalId(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handlePasswordSubmit}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              Verify & Approve
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
