@@ -1266,3 +1266,16 @@ def management_approve_tour(tour_id):
         print(f"Error in management tour approval: {e}")
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
+
+@hr_bp.route('/hr/tours/employees-on-tour', methods=['GET'])
+def get_employees_on_tour():
+    """Get employees currently on tour for a specific date"""
+    try:
+        date_str = request.args.get('date')  # Optional date parameter in YYYY-MM-DD format
+        result = HRService.get_employees_on_tour(date_str)
+        return jsonify(result), 200
+    except Exception as e:
+        print(f"Error fetching employees on tour: {e}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
