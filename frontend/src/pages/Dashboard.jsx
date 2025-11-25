@@ -138,11 +138,18 @@ const Dashboard = () => {
       icon: Users,
       color: 'from-pink-500 to-pink-600',
       description: 'Visitor management and guest check-in'
+    },
+    {
+      id: 'management',
+      name: 'Management',
+      icon: Building2,
+      color: 'from-slate-700 to-slate-900',
+      description: 'Overview and monitoring of all departments with full approval access'
     }
   ];
 
   const handleDepartmentAccess = (deptId) => {
-    if (user.department === 'admin' || user.department === deptId) {
+    if (user.department === 'admin' || user.department === deptId || (user.department === 'management' && deptId === 'management')) {
       navigate(`/dashboard/${deptId}`);
     } else {
       alert('Access denied. You can only access your assigned department.');
@@ -201,7 +208,7 @@ const Dashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {departments.map((dept, index) => {
               const Icon = dept.icon;
-              const isAccessible = isUserAdmin || user.department === dept.id;
+              const isAccessible = isUserAdmin || user.department === dept.id || (user.department === 'management' && dept.id === 'management');
               
               return (
                 <div key={dept.id}>
