@@ -1190,7 +1190,7 @@ class SalesService:
         query = SalesOrder.query.filter(
             SalesOrder.payment_due_date.isnot(None),
             SalesOrder.payment_due_date <= tomorrow,  # Due today or overdue
-            SalesOrder.payment_status.in_(['pending', 'partial']),  # Still need payment
+            SalesOrder.payment_status.in_(['pending', 'partial', 'pending_finance_approval']),  # Still need payment or awaiting finance approval
             SalesOrder.finance_bypass == True  # Only bypassed orders
         )
         
