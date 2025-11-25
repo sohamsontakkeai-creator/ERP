@@ -4,15 +4,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building2, ClipboardCheck, Eye, UserCheck, UserX, RefreshCw, AlertCircle, FileText, Users, Search } from 'lucide-react';
+import { Building2, ClipboardCheck, Eye, UserCheck, UserX, RefreshCw, AlertCircle, FileText, Users, Search, LogOut, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { API_BASE } from '@/lib/api';
 import SetSalesTarget from './SetSalesTarget';
 import SalesPerformanceDashboard from './SalesPerformanceDashboard';
 import AuditTrail from '../pages/AuditTrail';
 import ManagementAlerts from './ManagementAlerts';
+import { GuestDialog } from '@/components/GuestDialog';
 
 // Import all department components for read-only viewing
 import ProductionPlanning from './ProductionPlanning';
@@ -235,8 +237,10 @@ const UserManagement = () => {
 
 const ManagementDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const { user, users, getPendingUsers, approveUser, rejectUser } = useAuth();
+  const { user, users, getPendingUsers, approveUser, rejectUser, logout } = useAuth();
+  const navigate = useNavigate();
   const [pendingUsers, setPendingUsers] = useState([]);
+  const [showGuestDialog, setShowGuestDialog] = useState(false);
   const [orderApprovals, setOrderApprovals] = useState([]);
   const [leaveApprovals, setLeaveApprovals] = useState([]);
   const [tourApprovals, setTourApprovals] = useState([]);
@@ -282,6 +286,11 @@ const ManagementDashboard = () => {
       pendingTours: tourApprovals.length
     });
   }, [pendingUsers, orderApprovals, leaveApprovals, tourApprovals]);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/auth');
+  };
 
   const loadPendingUsers = async () => {
     setLoading(true);
@@ -650,15 +659,53 @@ const ManagementDashboard = () => {
           opacity: 0.7;
         }
       `}</style>
-      <div className="container mx-auto p-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-            <Building2 className="h-8 w-8" />
-            Management Dashboard
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Overview and monitoring of all departments with full approval access
-          </p>
+      <div className="container mx-auto px-4 py-6">
+        {/* Header Section */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+          <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            {/* Left Section: Back Button + Department Info */}
+            <div className="flex items-center gap-4 flex-1">
+              <Button
+                onClick={() => navigate(user?.department === 'admin' ? '/dashboard/admin' : '/dashboard')}
+                variant="outline"
+                className="border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 text-sm px-4 py-2"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Dashboard
+              </Button>
+              
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-slate-700 to-slate-900 rounded-md flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">Management Dashboard</h1>
+                  <p className="text-sm text-gray-600">Overview and monitoring of all departments with full approval access</p>
+                </div>
+              </div>
+            </div>
+            
+            {/* Right Section: Action Buttons */}
+            <div className="flex items-center gap-3">
+              {/* Add Guest Button */}
+              <Button
+                onClick={() => setShowGuestDialog(true)}
+                className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 px-4 py-2"
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>Add Guest</span>
+              </Button>
+              
+              {/* Logout Button */}
+              <Button 
+                onClick={handleLogout}
+                className="bg-red-600 hover:bg-red-700 text-white font-medium flex items-center gap-2 px-4 py-2"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
+              </Button>
+            </div>
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
@@ -1336,6 +1383,12 @@ const ManagementDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
+      
+      {/* Guest Dialog */}
+      <GuestDialog 
+        open={showGuestDialog} 
+        onOpenChange={setShowGuestDialog}
+      />
     </div>
   );
 };
