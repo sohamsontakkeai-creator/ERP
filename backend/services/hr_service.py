@@ -1915,3 +1915,60 @@ class HRService:
         
         db.session.commit()
         return tour.to_dict()
+
+    @staticmethod
+    def get_employees_on_tour(date_str=None):
+        """Get list of employees currently on tour for a specific date"""
+        from models.hr import TourIntimation, TourStatus
+        from datetime import datetime, date
+        
+        try:
+            # Use provided date or default to today
+            if date_str:
+                target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            else:
+                target_date = date.today()
+            
+            # Get approved tours that include the target date
+            current_tours = TourIntimation.query.filter(
+                TourIntimation.start_date <= target_date,
+                TourIntimation.end_date >= target_date,
+                TourIntimation.status == TourStatus.APPROVED
+            ).all()
+            
+            employees_on_tour = []
+            for tour in current_tours:
+                try:
+                    tour_info = {
+                        'id': tour.id,
+                        'employeeId': tour.employee_id,
+                        'employeeName': tour.employee_name,
+                        'tourPurpose': tour.tour_purpose,
+                        'destination': tour.destination,
+                        'startDate': tour.start_date.isoformat() if tour.start_date else None,
+                        'endDate': tour.end_date.isoformat() if tour.end_date else None,
+                        'durationDays': tour.duration_days,
+                        'estimatedCost': tour.estimated_cost,
+                        'travelMode': tour.travel_mode,
+                        'accommodationRequired': tour.accommodation_required,
+                        'remarks': tour.remarks,
+                        'approvedAt': tour.approved_at.isoformat() if tour.approved_at else None
+                    }
+                    employees_on_tour.append(tour_info)
+                except Exception as e:
+                    print(f"Error processing tour record {tour.id}: {e}")
+                    continue
+            
+            return {
+                'date': target_date.isoformat(),
+                'count': len(employees_on_tour),
+                'employees': employees_on_tour
+            }
+            
+        except Exception as e:
+            print(f"Error fetching employees on tour: {e}")
+            return {
+                'date': date.today().isoformat(),
+                'count': 0,
+                'employees': []
+            }
