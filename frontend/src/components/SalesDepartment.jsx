@@ -34,7 +34,8 @@ import {
     Award,
     X,
     UserCheck,
-    Download
+    Download,
+    Clock
 } from 'lucide-react';
 import { API_BASE } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
@@ -1971,9 +1972,29 @@ const handleDeliveryTypeChange = async () => {
                                     <p className="text-sm text-gray-600">
                                         Due Date: {new Date(reminder.paymentDueDate).toLocaleDateString()}
                                     </p>
-                                    <p className="text-xs text-gray-500">
-                                        Status: {reminder.paymentStatus}
-                                    </p>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <p className="text-xs text-gray-500">
+                                            Payment Status: 
+                                        </p>
+                                        {reminder.paymentStatus === 'pending_finance_approval' ? (
+                                            <Badge className="bg-orange-100 text-orange-800 border-orange-300">
+                                                <Clock className="h-3 w-3 mr-1" />
+                                                Sent to Finance for Approval
+                                            </Badge>
+                                        ) : reminder.paymentStatus === 'partial' ? (
+                                            <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                                                Partial Payment
+                                            </Badge>
+                                        ) : reminder.paymentStatus === 'pending' ? (
+                                            <Badge className="bg-red-100 text-red-800 border-red-300">
+                                                Payment Pending
+                                            </Badge>
+                                        ) : (
+                                            <Badge variant="outline">
+                                                {reminder.paymentStatus}
+                                            </Badge>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="flex gap-2">
                                     <Button
