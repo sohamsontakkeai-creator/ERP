@@ -203,6 +203,7 @@ const ManagementAlerts = () => {
                   <tr className="border-b border-gray-300">
                     <th className="p-3 text-left text-gray-900 font-bold">Order #</th>
                     <th className="p-3 text-left text-gray-900 font-bold">Customer</th>
+                    <th className="p-3 text-left text-gray-900 font-bold">Salesperson</th>
                     <th className="p-3 text-left text-gray-900 font-bold">Order Amount</th>
                     <th className="p-3 text-left text-gray-900 font-bold">Due Date</th>
                     <th className="p-3 text-left text-gray-900 font-bold">Days Overdue</th>
@@ -214,6 +215,11 @@ const ManagementAlerts = () => {
                     <tr key={reminder.id} className="border-b border-gray-100 hover:bg-gray-50">
                       <td className="p-3 text-gray-900 font-medium">#{reminder.orderNumber}</td>
                       <td className="p-3 text-gray-900">{reminder.customerName}</td>
+                      <td className="p-3 text-gray-900">
+                        <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-100 text-blue-800 text-sm font-medium">
+                          {reminder.salesPerson || 'N/A'}
+                        </span>
+                      </td>
                       <td className="p-3 text-gray-900 font-bold">
                         ₹{reminder.finalAmount?.toLocaleString() || reminder.final_amount?.toLocaleString() || reminder.totalAmount?.toLocaleString() || reminder.total_amount?.toLocaleString() || '0'}
                       </td>
