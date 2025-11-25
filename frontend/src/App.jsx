@@ -109,7 +109,7 @@ function App() {
           />
           <Route
             path="/dashboard"
-            element={user ? (user.department === 'admin' ? <Navigate to="/dashboard/admin" replace /> : user.department === 'management' ? <Navigate to="/dashboard/management" replace /> : <Dashboard />) : <Navigate to="/auth" replace />}
+            element={user ? (user.department === 'admin' ? <Navigate to="/dashboard/admin" replace /> : <Dashboard />) : <Navigate to="/auth" replace />}
           />
           <Route path="/dashboard/admin" element={<AdminRoute user={user}><AdminDashboard /></AdminRoute>} />
           <Route path="/dashboard/management" element={<ProtectedRoute user={user} department="management"><ManagementDashboard /></ProtectedRoute>} />
