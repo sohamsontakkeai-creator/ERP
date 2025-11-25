@@ -235,7 +235,7 @@ const UserManagement = () => {
 
 const ManagementDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
-  const { users, getPendingUsers, approveUser, rejectUser } = useAuth();
+  const { user, users, getPendingUsers, approveUser, rejectUser } = useAuth();
   const [pendingUsers, setPendingUsers] = useState([]);
   const [orderApprovals, setOrderApprovals] = useState([]);
   const [leaveApprovals, setLeaveApprovals] = useState([]);
