@@ -345,6 +345,7 @@ const HRDepartment = () => {
         dateOfBirth: normalized.dateOfBirth || normalized.date_of_birth || '',
         gender: normalized.gender || '',
         managerId: normalized.managerId ? normalized.managerId.toString() : null,
+        managerName: normalized.managerName || employee.managerName || null,
         photo: employee.photo || normalized.photo || ''
       };
       setModalFormData(formData);
@@ -2852,6 +2853,10 @@ const DashboardView = ({ employees = [] }) => {  // ✅ Accept employees as prop
                   <div>
                     <Label>Designation</Label>
                     <p className="text-sm text-gray-600">{modalFormData.designation || '—'}</p>
+                  </div>
+                  <div>
+                    <Label>Manager Name</Label>
+                    <p className="text-sm text-gray-600">{modalFormData.managerName || 'No Manager Assigned'}</p>
                   </div>
                   <div>
                     <Label>Joining Date</Label>
