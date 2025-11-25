@@ -21,8 +21,14 @@ import ManagementDashboard from '@/components/ManagementDashboard';
 import ReceptionDashboard from '@/components/ReceptionDepartment';
 // import WebSocketNotifications from '@/components/WebSocketNotifications';
 import { useAuth } from '@/hooks/useAuth';
+import { useSessionValidator } from '@/hooks/useSessionValidator';
 // import { useWebSocket } from '@/hooks/useWebSocket';
 
+// Component to initialize session validator inside Router context
+const SessionValidator = () => {
+  useSessionValidator();
+  return null;
+};
 
 const ProtectedRoute = ({ user, department, children }) => {
     const location = useLocation();
@@ -96,6 +102,9 @@ function App() {
         <meta property="og:title" content="ERP Management System" />
         <meta property="og:description" content="Streamline your business operations with our advanced ERP solution" />
       </Helmet>
+
+      {/* Initialize session validator inside Router context */}
+      <SessionValidator />
 
       <div className="min-h-screen">
         <Routes>
