@@ -5,6 +5,7 @@ API endpoints for user authentication (login, registration, password reset, OAut
 from flask import Blueprint, request, jsonify, current_app
 from flask_mail import Message
 from utils.jwt_helpers import create_access_token_safe
+from utils.timezone_helpers import get_ist_now
 from models.user import User, UserStatus, db
 from models.password_reset_token import PasswordResetToken
 from models import AuditAction, AuditModule
@@ -260,12 +261,19 @@ def update_user_department(user_id):
         if not user:
             return jsonify({'error': 'User not found'}), 404
 
+        old_department = user.department
         user.department = data['department']
+        user.updated_at = get_ist_now()  # Update timestamp to track change
         db.session.commit()
+
+        # Log the department change
+        print(f"[DEPARTMENT CHANGE] User {user.username} (ID: {user_id}) department changed from {old_department} to {data['department']}")
 
         return jsonify({
             'message': 'User department updated successfully',
-            'user': user.to_dict()
+            'user': user.to_dict(),
+            'department_changed': True,
+            'affected_user_id': user_id
         }), 200
 
     except Exception as e:
@@ -408,3 +416,33 @@ def get_departments():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@auth_bp.route('/auth/validate-session', methods=['POST'])
+def validate_session():
+    """Validate if user's session is still valid (check if department changed)"""
+    try:
+        data = request.get_json() or {}
+        user_id = data.get('userId')
+        current_department = data.get('currentDepartment')
+        
+        if not user_id or not current_department:
+            return jsonify({'valid': False, 'reason': 'Missing parameters'}), 400
+        
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'valid': False, 'reason': 'User not found'}), 404
+        
+        # Check if department has changed
+        if user.department != current_department:
+            return jsonify({
+                'valid': False,
+                'reason': 'Department changed',
+                'new_department': user.department,
+                'message': 'Your department has been changed. Please login again.'
+            }), 200
+        
+        return jsonify({'valid': True}), 200
+        
+    except Exception as e:
+        return jsonify({'valid': False, 'reason': str(e)}), 500
