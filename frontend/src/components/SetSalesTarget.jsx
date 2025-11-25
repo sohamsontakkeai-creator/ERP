@@ -28,6 +28,7 @@ const SetSalesTarget = () => {
     const [salesPersons, setSalesPersons] = useState([]);
     const [filteredSalesPersons, setFilteredSalesPersons] = useState([]);
     const [targets, setTargets] = useState([]);
+    const [salesPersonTargets, setSalesPersonTargets] = useState({}); // Store targets by salesperson name
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState('set-target');
@@ -48,6 +49,13 @@ const SetSalesTarget = () => {
         loadSalesPersons();
         loadAllTargets();
     }, []);
+
+    // Load targets for all salespersons when they change
+    useEffect(() => {
+        if (salesPersons.length > 0) {
+            loadTargetsForAllSalesPersons();
+        }
+    }, [salesPersons, formData.year, formData.month]);
 
     // Filter sales persons based on search
     useEffect(() => {
@@ -109,6 +117,46 @@ const SetSalesTarget = () => {
         }
     };
 
+    const loadTargetsForAllSalesPersons = async () => {
+        try {
+            const targetsMap = {};
+            
+            // Fetch targets for each salesperson
+            for (const person of salesPersons) {
+                try {
+                    const response = await fetch(
+                        `${API_BASE}/sales/targets/all?salesPerson=${encodeURIComponent(person.name)}&year=${formData.year}`,
+                        {
+                            headers: {
+                                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                            }
+                        }
+                    );
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const targets = data.targets || [];
+                        
+                        // Find target for current month
+                        const currentMonthTarget = targets.find(
+                            t => t.month === formData.month && t.year === formData.year
+                        );
+                        
+                        if (currentMonthTarget) {
+                            targetsMap[person.name] = currentMonthTarget;
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Error loading targets for ${person.name}:`, error);
+                }
+            }
+            
+            setSalesPersonTargets(targetsMap);
+        } catch (error) {
+            console.error('Error loading targets for salespersons:', error);
+        }
+    };
+
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({
@@ -158,9 +206,12 @@ const SetSalesTarget = () => {
 
             if (response.ok || response.status === 201) {
                 const data = await response.json();
+                const monthName = new Date(formData.year, formData.month - 1).toLocaleString('default', { month: 'long' });
                 toast({
                     title: "Success",
-                    description: `Target set successfully for ${formData.salesPerson}`,
+                    description: editingTarget 
+                        ? `Target updated successfully for ${formData.salesPerson} (${monthName} ${formData.year})`
+                        : `Target set successfully for ${formData.salesPerson} (${monthName} ${formData.year})`,
                 });
                 
                 // Reset form
@@ -175,6 +226,7 @@ const SetSalesTarget = () => {
                 setShowDialog(false);
                 setEditingTarget(null);
                 loadAllTargets();
+                loadTargetsForAllSalesPersons(); // Refresh target status
             } else {
                 const error = await response.json();
                 throw new Error(error.error || 'Failed to set target');
@@ -336,46 +388,86 @@ const SetSalesTarget = () => {
                                             <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Name</th>
                                             <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Email</th>
                                             <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Username</th>
+                                            <th className="px-6 py-3 text-left text-sm font-bold text-gray-900">Target Status</th>
                                             <th className="px-6 py-3 text-center text-sm font-bold text-gray-900">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white">
                                         {filteredSalesPersons.length === 0 ? (
                                             <tr>
-                                                <td colSpan="4" className="px-6 py-8 text-center text-gray-500">
+                                                <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
                                                     <AlertCircle className="w-10 h-10 mx-auto mb-2 text-gray-400" />
                                                     <p className="font-medium">No salespeople found</p>
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredSalesPersons.map((person) => (
+                                            filteredSalesPersons.map((person) => {
+                                                const existingTarget = salesPersonTargets[person.name];
+                                                const monthName = new Date(formData.year, formData.month - 1).toLocaleString('default', { month: 'long' });
+                                                
+                                                return (
                                                 <tr key={person.id} className="border-b border-gray-100 hover:bg-blue-50">
                                                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{person.name}</td>
                                                     <td className="px-6 py-4 text-sm text-gray-700">{person.email}</td>
                                                     <td className="px-6 py-4 text-sm text-gray-700">{person.username}</td>
+                                                    <td className="px-6 py-4 text-sm">
+                                                        {existingTarget ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <Badge className="bg-green-100 text-green-800 border-green-300">
+                                                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                                                    Target Set for {monthName}
+                                                                </Badge>
+                                                                <span className="text-gray-600 font-medium">
+                                                                    ₹{Number(existingTarget.targetAmount).toLocaleString()}
+                                                                </span>
+                                                            </div>
+                                                        ) : (
+                                                            <Badge variant="outline" className="bg-gray-100 text-gray-600">
+                                                                No Target Set
+                                                            </Badge>
+                                                        )}
+                                                    </td>
                                                     <td className="px-6 py-4 text-center">
                                                         <Dialog open={showDialog && formData.salesPerson === person.name} onOpenChange={setShowDialog}>
                                                             <DialogTrigger asChild>
                                                                 <Button
                                                                     onClick={() => {
+                                                                        const target = salesPersonTargets[person.name];
                                                                         setFormData(prev => ({
                                                                             ...prev,
-                                                                            salesPerson: person.name
+                                                                            salesPerson: person.name,
+                                                                            targetAmount: target ? target.targetAmount : '',
+                                                                            notes: target ? target.notes || '' : ''
                                                                         }));
+                                                                        setEditingTarget(target || null);
                                                                         setShowDialog(true);
                                                                     }}
-                                                                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                                    className={existingTarget ? "bg-orange-600 hover:bg-orange-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}
                                                                     size="sm"
                                                                 >
-                                                                    <TargetIcon className="w-4 h-4 mr-1" />
-                                                                    Set Target
+                                                                    {existingTarget ? (
+                                                                        <>
+                                                                            <Edit className="w-4 h-4 mr-1" />
+                                                                            Edit Target
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            <TargetIcon className="w-4 h-4 mr-1" />
+                                                                            Set Target
+                                                                        </>
+                                                                    )}
                                                                 </Button>
                                                             </DialogTrigger>
                                                             <DialogContent>
                                                                 <DialogHeader>
-                                                                    <DialogTitle>Set Target for {person.name} ({person.username})</DialogTitle>
+                                                                    <DialogTitle>
+                                                                        {existingTarget ? 'Edit' : 'Set'} Target for {person.name} ({person.username})
+                                                                    </DialogTitle>
                                                                     <DialogDescription>
-                                                                        Enter the monthly sales target for this salesperson
+                                                                        {existingTarget 
+                                                                            ? `Update the sales target for ${monthName} ${formData.year}`
+                                                                            : 'Enter the monthly sales target for this salesperson'
+                                                                        }
                                                                     </DialogDescription>
                                                                 </DialogHeader>
                                                                 <form onSubmit={handleSetTarget} className="space-y-4">
@@ -438,8 +530,8 @@ const SetSalesTarget = () => {
                                                                         <Button type="button" variant="outline" onClick={handleCloseDialog}>
                                                                             Cancel
                                                                         </Button>
-                                                                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                                                                            Set Target
+                                                                        <Button type="submit" className={existingTarget ? "bg-orange-600 hover:bg-orange-700" : "bg-blue-600 hover:bg-blue-700"}>
+                                                                            {existingTarget ? 'Update Target' : 'Set Target'}
                                                                         </Button>
                                                                     </DialogFooter>
                                                                 </form>
@@ -447,7 +539,8 @@ const SetSalesTarget = () => {
                                                         </Dialog>
                                                     </td>
                                                 </tr>
-                                            ))
+                                                );
+                                            })
                                         )}
                                     </tbody>
                                 </table>
