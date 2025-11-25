@@ -988,7 +988,7 @@ const handleCouponSubmit = async () => {
         if (res.ok) {
             toast({ 
                 title: 'Approval Request Sent', 
-                description: `Order ${selectedOrder.orderNumber} sent to admin for approval. Payment due: ${couponForm.paymentDueDate}` 
+                description: `Order ${selectedOrder.orderNumber} sent to Management for approval. Payment due: ${couponForm.paymentDueDate}` 
             });
             setShowCouponDialog(false);
             fetchData(); // Refresh orders
