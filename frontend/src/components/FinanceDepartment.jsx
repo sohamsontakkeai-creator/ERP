@@ -20,7 +20,8 @@ import {
   AlertCircle,
   Building,
   Users,
-  Calendar
+  Calendar,
+  Download
 } from 'lucide-react';
 import { API_BASE } from '@/lib/api';
 import OrderStatusBar from '@/components/ui/OrderStatusBar';
@@ -131,6 +132,26 @@ const FinanceDepartment = () => {
       setBypassedSalesOrders(data);
     } catch (err) {
       console.error('Error fetching bypassed sales orders:', err);
+    }
+  };
+
+  // Download Invoice function
+  const handleDownloadInvoice = async (orderId, orderNumber) => {
+    try {
+      toast({ title: 'Opening Invoice...', description: 'Generating invoice' });
+      
+      // Open invoice in new window - backend returns HTML
+      const invoiceUrl = `${API_BASE}/finance/orders/${orderId}/invoice`;
+      window.open(invoiceUrl, '_blank');
+      
+      toast({ title: 'Success', description: 'Invoice opened in new window' });
+    } catch (error) {
+      console.error('Error opening invoice:', error);
+      toast({ 
+        title: 'Error', 
+        description: 'Failed to open invoice', 
+        variant: 'destructive' 
+      });
     }
   };
 
@@ -989,15 +1010,27 @@ const FinanceDepartment = () => {
                   {approvedSalesOrders.map(order => (
                     <div key={order.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
                       <div className="flex justify-between items-start">
-                        <div>
+                        <div className="flex-1">
                           <h4 className="font-medium text-gray-900">Order #{order.orderNumber}</h4>
                           <p className="text-sm text-gray-600">Customer: {order.customerName}</p>
                           <p className="text-sm text-gray-600">Sales Person: {order.salesPerson}</p>
                           <p className="text-sm font-semibold text-green-700">Amount: ₹{order.finalAmount?.toLocaleString()}</p>
                         </div>
-                        <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded">
-                          {order.paymentStatus}
-                        </span>
+                        <div className="flex items-center gap-3">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-green-600 text-green-700 hover:bg-green-50"
+                            onClick={() => handleDownloadInvoice(order.id, order.orderNumber)}
+                            title="Download Invoice"
+                          >
+                            <Download className="h-4 w-4 mr-2" />
+                            Invoice
+                          </Button>
+                          <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded">
+                            {order.paymentStatus}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1023,15 +1056,25 @@ const FinanceDepartment = () => {
           {bypassedSalesOrders.map((order) => (
             <div key={order.id} className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
               <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-bold text-black">Order #{order.id}</h3>
+                <div className="flex-1">
+                  <h3 className="font-bold text-black">Order #{order.orderNumber || order.id}</h3>
                   <p className="text-gray-700">Customer: {order.customerName}</p>
                   <p className="text-gray-700">Product: {order.showroomProduct?.name || 'N/A'}</p>
                   <p className="text-gray-700">Quantity: {order.quantity}</p>
                   <p className="text-gray-700">Sales Person: {order.salesPerson}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-green-700">₹{order.totalAmount?.toLocaleString()}</p>
+                <div className="text-right flex flex-col items-end gap-2">
+                  <p className="text-2xl font-bold text-green-700">₹{order.totalAmount?.toLocaleString() || order.finalAmount?.toLocaleString()}</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-green-600 text-green-700 hover:bg-green-50"
+                    onClick={() => handleDownloadInvoice(order.id, order.orderNumber || order.id)}
+                    title="Download Invoice"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Invoice
+                  </Button>
                   <Badge className="bg-green-100 text-green-800">Full Payment</Badge>
                 </div>
               </div>
