@@ -600,36 +600,47 @@ const ShowroomDepartment = () => {
 
                           {/* Action Buttons */}
                           <div className="flex gap-3">
+                            {/* Always show Conduct Test button */}
                             <Button
                               onClick={() => openTestingDialog(product)}
                               variant="outline"
                               className="flex-1 border-blue-300 text-blue-700 hover:bg-blue-50"
                             >
                               <TestTube className="w-4 h-4 mr-2" />
-                              View Machine Tests
+                              {pendingMachineCount(product.id) === totalMachineCount(product.id) 
+                                ? 'Conduct Test' 
+                                : 'View Machine Tests'}
                             </Button>
-                            <Button
-                              onClick={() => processAssemblyAfterTesting(product.id)}
-                              className={`flex-1 ${
-                                canProceedToShowroom(product.id)
-                                  ? 'bg-green-600 hover:bg-green-700 text-white'
-                                  : 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                              }`}
-                              disabled={
-                                !canProceedToShowroom(product.id) ||
-                                displayedProducts.some(p => p.productionOrderId === product.productionOrderId)
-                              }
-                            >
-                              <Store className="w-4 h-4 mr-2" />
-                              {displayedProducts.some(p => p.productionOrderId === product.productionOrderId)
-                                ? 'In Showroom'
-                                : canProceedToShowroom(product.id)
-                                  ? 'Move to Showroom'
-                                  : failedMachineCount(product.id) > 0
-                                    ? 'Resolve Failed Machines'
-                                    : 'Testing Incomplete'}
-                            </Button>
-                            {failedMachineCount(product.id) > 0 && (
+                            
+                            {/* Only show Move to Showroom button if at least one machine has been tested */}
+                            {totalMachineCount(product.id) !== null && 
+                             pendingMachineCount(product.id) < totalMachineCount(product.id) && (
+                              <Button
+                                onClick={() => processAssemblyAfterTesting(product.id)}
+                                className={`flex-1 ${
+                                  canProceedToShowroom(product.id)
+                                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                                    : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                                }`}
+                                disabled={
+                                  !canProceedToShowroom(product.id) ||
+                                  displayedProducts.some(p => p.productionOrderId === product.productionOrderId)
+                                }
+                              >
+                                <Store className="w-4 h-4 mr-2" />
+                                {displayedProducts.some(p => p.productionOrderId === product.productionOrderId)
+                                  ? 'In Showroom'
+                                  : canProceedToShowroom(product.id)
+                                    ? 'Move to Showroom'
+                                    : failedMachineCount(product.id) > 0
+                                      ? 'Resolve Failed Machines'
+                                      : 'Testing Incomplete'}
+                              </Button>
+                            )}
+                            
+                            {/* Show Send Failed Machines button only if there are failed machines and testing has started */}
+                            {failedMachineCount(product.id) > 0 && 
+                             pendingMachineCount(product.id) < totalMachineCount(product.id) && (
                               getAssemblySummary(product.id)?.failedMachinesInRework ? (
                                 <Button
                                   variant="outline"
@@ -1034,16 +1045,29 @@ const ShowroomDepartment = () => {
                 Close
               </Button>
               {selectedProductForTesting && (
-                <Button
-                  onClick={() => processAssemblyAfterTesting(selectedProductForTesting.id)}
-                  className={`px-6 py-2 ${testSummary?.canProceed 
-                    ? 'bg-green-600 hover:bg-green-700 text-white' 
-                    : 'bg-gray-400 text-gray-600 cursor-not-allowed'}`}
-                  disabled={!testSummary?.canProceed}
-                >
-                  <Store className="w-4 h-4 mr-2" />
-                  {testSummary?.canProceed ? 'Process Results' : 'Complete Testing First'}
-                </Button>
+                <>
+                  {/* Show "Complete Testing First" button when testing is incomplete */}
+                  {testSummary?.pending > 0 && (
+                    <Button
+                      disabled
+                      className="px-6 py-2 bg-gray-400 text-gray-600 cursor-not-allowed"
+                    >
+                      <Clock className="w-4 h-4 mr-2" />
+                      Complete Testing First
+                    </Button>
+                  )}
+                  
+                  {/* Show "Process Result" button when all testing is complete */}
+                  {testSummary?.pending === 0 && (
+                    <Button
+                      onClick={() => processAssemblyAfterTesting(selectedProductForTesting.id)}
+                      className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <Store className="w-4 h-4 mr-2" />
+                      Process Result
+                    </Button>
+                  )}
+                </>
               )}
             </div>
           </DialogFooter>
