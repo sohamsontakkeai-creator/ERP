@@ -69,7 +69,8 @@ def verify_customer_pickup(gate_pass_id):
                 filename = secure_filename(f.filename)
                 filepath = os.path.join(upload_folder, filename)
                 f.save(filepath)
-                saved_files['send_in_photo'] = filepath
+                # Store relative path instead of absolute path
+                saved_files['send_in_photo'] = f'uploads/{filename}'
 
         # after loading photo
         if 'afterLoadingPhoto' in request.files:
@@ -78,7 +79,8 @@ def verify_customer_pickup(gate_pass_id):
                 filename = secure_filename(f.filename)
                 filepath = os.path.join(upload_folder, filename)
                 f.save(filepath)
-                saved_files['after_loading_photo'] = filepath
+                # Store relative path instead of absolute path
+                saved_files['after_loading_photo'] = f'uploads/{filename}'
 
         # Merge files info into data passed to service
         data.update(saved_files)
