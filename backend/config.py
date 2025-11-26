@@ -45,6 +45,10 @@ class Config:
 
     # Frontend URL for OAuth redirects
     FRONTEND_BASE_URL = os.getenv('FRONTEND_BASE_URL', 'http://localhost:5173')
+    
+    # Backend URL for file uploads
+    BACKEND_BASE_URL = os.getenv('BACKEND_BASE_URL', 'http://localhost:5000')
+
 
 class DevelopmentConfig(Config):
     """Development configuration"""
