@@ -2,7 +2,7 @@
 Watchman Routes Module
 API endpoints for watchman operations (gate security)
 """
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, send_from_directory
 import os
 from werkzeug.utils import secure_filename
 from services.watchman_service import WatchmanService
@@ -12,6 +12,16 @@ from services.audit_service import AuditService
 import traceback
 
 watchman_bp = Blueprint('watchman', __name__)
+
+
+@watchman_bp.route('/watchman/uploads/<path:filename>', methods=['GET'])
+def serve_uploaded_file(filename):
+    """Serve uploaded files (photos)"""
+    try:
+        upload_folder = os.path.join(os.getcwd(), 'backend', 'uploads')
+        return send_from_directory(upload_folder, filename)
+    except Exception as e:
+        return jsonify({'error': 'File not found'}), 404
 
 
 @watchman_bp.route('/watchman/test-endpoint', methods=['GET'])
@@ -61,6 +71,9 @@ def verify_customer_pickup(gate_pass_id):
         upload_folder = os.path.join(os.getcwd(), 'backend', 'uploads')
         os.makedirs(upload_folder, exist_ok=True)
 
+        # Get backend base URL from config
+        backend_url = current_app.config.get('BACKEND_BASE_URL', 'http://localhost:5000')
+
         saved_files = {}
         # send in photo
         if 'sendInPhoto' in request.files:
@@ -69,8 +82,8 @@ def verify_customer_pickup(gate_pass_id):
                 filename = secure_filename(f.filename)
                 filepath = os.path.join(upload_folder, filename)
                 f.save(filepath)
-                # Store relative path instead of absolute path
-                saved_files['send_in_photo'] = f'uploads/{filename}'
+                # Store full URL for direct browser access
+                saved_files['send_in_photo'] = f'{backend_url}/api/watchman/uploads/{filename}'
 
         # after loading photo
         if 'afterLoadingPhoto' in request.files:
@@ -79,8 +92,8 @@ def verify_customer_pickup(gate_pass_id):
                 filename = secure_filename(f.filename)
                 filepath = os.path.join(upload_folder, filename)
                 f.save(filepath)
-                # Store relative path instead of absolute path
-                saved_files['after_loading_photo'] = f'uploads/{filename}'
+                # Store full URL for direct browser access
+                saved_files['after_loading_photo'] = f'{backend_url}/api/watchman/uploads/{filename}'
 
         # Merge files info into data passed to service
         data.update(saved_files)
