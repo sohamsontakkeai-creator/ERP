@@ -31,6 +31,10 @@ def create_app(config_name=None):
     # Load frontend URL from environment (for password reset links)
     app.config['FRONTEND_BASE_URL'] = os.getenv('FRONTEND_BASE_URL', 'http://localhost:5173')
 
+        
+    # Load backend URL from environment (for file uploads)
+    app.config['BACKEND_BASE_URL'] = os.getenv('BACKEND_BASE_URL', 'http://localhost:5000')
+
     # Initialize core extensions
     db.init_app(app)
     mail.init_app(app)
