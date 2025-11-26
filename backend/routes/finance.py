@@ -241,3 +241,32 @@ def get_approved_sales_bills():
         return jsonify(orders), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+
+@finance_bp.route('/finance/orders/<int:order_id>/invoice', methods=['GET'])
+def download_finance_invoice(order_id):
+    """Generate and display final invoice HTML for a sales order (Finance Department)"""
+    try:
+        from utils.invoice_generator import generate_final_invoice
+        from models import SalesOrder
+        
+        # Get the sales order
+        order = SalesOrder.query.get(order_id)
+        if not order:
+            return jsonify({'error': 'Order not found'}), 404
+        
+        # Convert to dict for invoice generator
+        order_dict = order.to_dict()
+        
+        # Generate HTML
+        html_content = generate_final_invoice(order_dict)
+        
+        # Return HTML directly - browser can print it
+        return html_content, 200, {'Content-Type': 'text/html'}
+        
+    except Exception as e:
+        print(f"Error generating invoice: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
