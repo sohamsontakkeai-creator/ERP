@@ -323,11 +323,13 @@ class TransportService:
                     approval_data['originalTransportCost'] = request.original_transport_cost  # Keep original for reference
                     approval_data['paymentStatus'] = sales_order.payment_status
                     approval_data['orderStatus'] = sales_order.order_status
-                    # Add transport details for approval decision (from transport cost calculation)
-                    approval_data['origin'] = getattr(sales_order, 'origin', None)
-                    approval_data['destination'] = getattr(sales_order, 'destination', None)
-                    approval_data['distance'] = getattr(sales_order, 'distance', None)
-                    approval_data['vehicleType'] = getattr(sales_order, 'vehicle_type', None)
+                    # Origin and destination are already set in request.to_dict()
+                    # Don't override them with None values from sales_order
+                    # Only set distance and vehicleType if they exist in sales_order
+                    if hasattr(sales_order, 'distance') and sales_order.distance:
+                        approval_data['distance'] = sales_order.distance
+                    if hasattr(sales_order, 'vehicle_type') and sales_order.vehicle_type:
+                        approval_data['vehicleType'] = sales_order.vehicle_type
                     
                 if showroom_product:
                     approval_data['productName'] = showroom_product.name
