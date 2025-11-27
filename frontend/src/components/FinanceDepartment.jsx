@@ -21,7 +21,8 @@ import {
   Building,
   Users,
   Calendar,
-  Download
+  Download,
+  CheckCircle
 } from 'lucide-react';
 import { API_BASE } from '@/lib/api';
 import OrderStatusBar from '@/components/ui/OrderStatusBar';
@@ -1053,33 +1054,56 @@ const FinanceDepartment = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {bypassedSalesOrders.map((order) => (
-            <div key={order.id} className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <h3 className="font-bold text-black">Order #{order.orderNumber || order.id}</h3>
-                  <p className="text-gray-700">Customer: {order.customerName}</p>
-                  <p className="text-gray-700">Product: {order.showroomProduct?.name || 'N/A'}</p>
-                  <p className="text-gray-700">Quantity: {order.quantity}</p>
-                  <p className="text-gray-700">Sales Person: {order.salesPerson}</p>
-                </div>
-                <div className="text-right flex flex-col items-end gap-2">
-                  <p className="text-2xl font-bold text-green-700">₹{order.totalAmount?.toLocaleString() || order.finalAmount?.toLocaleString()}</p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-green-600 text-green-700 hover:bg-green-50"
-                    onClick={() => handleDownloadInvoice(order.id, order.orderNumber || order.id)}
-                    title="Download Invoice"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Invoice
-                  </Button>
-                  <Badge className="bg-green-100 text-green-800">Full Payment</Badge>
+          {bypassedSalesOrders.map((order) => {
+            // Determine payment status
+            const paymentStatus = order.paymentStatus || 'pending';
+            const isPaymentComplete = paymentStatus === 'paid' || paymentStatus === 'finance_approved' || paymentStatus === 'completed';
+            
+            return (
+              <div key={order.id} className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="font-bold text-black">Order #{order.orderNumber || order.id}</h3>
+                      {/* Payment Status Badge */}
+                      {isPaymentComplete ? (
+                        <Badge className="bg-green-100 text-green-800 border border-green-300 flex items-center gap-1">
+                          <CheckCircle className="w-3 h-3" />
+                          Payment Completed
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-yellow-100 text-yellow-800 border border-yellow-300 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          Payment Pending
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-gray-700">Customer: {order.customerName}</p>
+                    <p className="text-gray-700">Product: {order.showroomProduct?.name || 'N/A'}</p>
+                    <p className="text-gray-700">Quantity: {order.quantity}</p>
+                    <p className="text-gray-700">Sales Person: {order.salesPerson}</p>
+                    {order.paymentMethod && (
+                      <p className="text-gray-700">Payment Method: {order.paymentMethod}</p>
+                    )}
+                  </div>
+                  <div className="text-right flex flex-col items-end gap-2">
+                    <p className="text-2xl font-bold text-green-700">₹{order.totalAmount?.toLocaleString() || order.finalAmount?.toLocaleString()}</p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-green-600 text-green-700 hover:bg-green-50"
+                      onClick={() => handleDownloadInvoice(order.id, order.orderNumber || order.id)}
+                      title="Download Invoice"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Invoice
+                    </Button>
+                    <Badge className="bg-blue-100 text-blue-800">Bypassed Finance</Badge>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </CardContent>
