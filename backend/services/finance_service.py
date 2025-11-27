@@ -119,10 +119,15 @@ class FinanceService:
             print("[DASHBOARD] Calculating finance dashboard data...")
             
             # Calculate total revenue from SalesTransaction table (actual customer payments)
-            # This is the correct source as it reflects actual money received
-            sales_transactions = SalesTransaction.query.filter_by(transaction_type='payment').all()
+            # Only include payments from orders with completed payment status (approved by finance)
+            sales_transactions = db.session.query(SalesTransaction).join(
+                SalesOrder, SalesTransaction.sales_order_id == SalesOrder.id
+            ).filter(
+                SalesTransaction.transaction_type == 'payment',
+                SalesOrder.payment_status == 'completed'
+            ).all()
             total_revenue = sum(float(txn.amount or 0) for txn in sales_transactions)
-            print(f"[DASHBOARD] Total Revenue: ₹{total_revenue} from {len(sales_transactions)} payment transactions")
+            print(f"[DASHBOARD] Total Revenue: ₹{total_revenue} from {len(sales_transactions)} approved payment transactions")
 
             # Calculate total expenses from FinanceTransaction table (expense type)
             expense_transactions = FinanceTransaction.query.filter_by(transaction_type='expense').all()
@@ -132,7 +137,7 @@ class FinanceService:
             for txn in expense_transactions:
                 print(f"[DASHBOARD] Expense: ₹{txn.amount} - {txn.description}")
 
-            # Calculate revenue breakdown by payment method from SalesTransaction
+            # Calculate revenue breakdown by payment method from approved SalesTransactions only
             payment_method_breakdown = {}
             
             for txn in sales_transactions:
@@ -143,7 +148,7 @@ class FinanceService:
                 else:
                     payment_method_breakdown[method] = amount
             
-            print(f"[DASHBOARD] Payment Method Breakdown: {payment_method_breakdown}")
+            print(f"[DASHBOARD] Payment Method Breakdown (approved only): {payment_method_breakdown}")
             
             # Verify total revenue matches breakdown sum
             breakdown_total = sum(payment_method_breakdown.values())
