@@ -1631,7 +1631,6 @@ const TransportDepartment = () => {
                       <TableHead className="min-w-[100px] text-black">Product</TableHead>
                       <TableHead className="min-w-[100px] text-black">Origin</TableHead>
                       <TableHead className="min-w-[120px] text-black">Destination</TableHead>
-                      <TableHead className="min-w-[80px] text-black">Distance (km)</TableHead>
                       <TableHead className="min-w-[100px] text-black">Delivery Type</TableHead>
                       <TableHead className="min-w-[100px] text-black">Transport Cost</TableHead>
                       <TableHead className="min-w-[120px] text-black">Sales Person</TableHead>
@@ -1642,7 +1641,7 @@ const TransportDepartment = () => {
                   <TableBody>
                     {pendingApprovals.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={11} className="text-center py-8 text-gray-600">
+                        <TableCell colSpan={10} className="text-center py-8 text-gray-600">
                           No pending approvals found.
                         </TableCell>
                       </TableRow>
@@ -1670,9 +1669,6 @@ const TransportDepartment = () => {
                             <div className="max-w-[150px] truncate" title={approval.destination}>
                               {approval.destination || '-'}
                             </div>
-                          </TableCell>
-                          <TableCell className="text-xs sm:text-sm text-gray-800 text-center">
-                            {approval.distance ? `${approval.distance} km` : '-'}
                           </TableCell>
                           <TableCell className="text-xs sm:text-sm">
                             <Badge className="bg-amber-100 text-amber-800 border border-amber-300">
