@@ -143,6 +143,12 @@ class TransportApprovalRequest(db.Model):
     
     def to_dict(self):
         """Convert model instance to dictionary"""
+        # Get origin and destination from sales order
+        origin = "H-6/5, MIDC, Chikalthana, Ch. Sambhajinagar 431001"  # Company address
+        destination = self.sales_order.customer_address if self.sales_order else "N/A"
+        customer_name = self.sales_order.customer_name if self.sales_order else "N/A"
+        order_number = self.sales_order.order_number if self.sales_order else "N/A"
+        
         return {
             'id': self.id,
             'salesOrderId': self.sales_order_id,
@@ -155,6 +161,10 @@ class TransportApprovalRequest(db.Model):
             'approvedBy': self.approved_by,
             'createdAt': self.created_at.isoformat(),
             'updatedAt': self.updated_at.isoformat(),
+            'origin': origin,
+            'destination': destination,
+            'customerName': customer_name,
+            'orderNumber': order_number,
             'salesOrder': self.sales_order.to_dict() if self.sales_order else None
         }
 
