@@ -296,16 +296,16 @@ class SalesService:
             sales_order.total_amount = total_amount
             sales_order.discount_amount = discount_amount
             sales_order.final_amount = final_amount
-            
-            # Update transport details if provided
-            if 'origin' in data:
-                sales_order.origin = data['origin']
-            if 'destination' in data:
-                sales_order.destination = data['destination']
-            if 'distance' in data:
-                sales_order.distance = data['distance']
-            if 'vehicleType' in data:
-                sales_order.vehicle_type = data['vehicleType']
+        
+        # Update transport details if provided (regardless of pricing changes)
+        if 'origin' in data:
+            sales_order.origin = data['origin']
+        if 'destination' in data:
+            sales_order.destination = data['destination']
+        if 'distance' in data:
+            sales_order.distance = data['distance']
+        if 'vehicleType' in data:
+            sales_order.vehicle_type = data['vehicleType']
 
         # Handle delivery type changes with special logic AFTER pricing updates
         new_delivery_type = data.get('deliveryType')
