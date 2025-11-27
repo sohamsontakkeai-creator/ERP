@@ -118,10 +118,11 @@ class FinanceService:
         try:
             print("[DASHBOARD] Calculating finance dashboard data...")
             
-            # Calculate total revenue from FinanceTransaction table (revenue type)
-            revenue_transactions = FinanceTransaction.query.filter_by(transaction_type='revenue').all()
-            total_revenue = sum(float(txn.amount or 0) for txn in revenue_transactions)
-            print(f"[DASHBOARD] Total Revenue: ₹{total_revenue} from {len(revenue_transactions)} revenue transactions")
+            # Calculate total revenue from SalesTransaction table (actual customer payments)
+            # This is the correct source as it reflects actual money received
+            sales_transactions = SalesTransaction.query.filter_by(transaction_type='payment').all()
+            total_revenue = sum(float(txn.amount or 0) for txn in sales_transactions)
+            print(f"[DASHBOARD] Total Revenue: ₹{total_revenue} from {len(sales_transactions)} payment transactions")
 
             # Calculate total expenses from FinanceTransaction table (expense type)
             expense_transactions = FinanceTransaction.query.filter_by(transaction_type='expense').all()
@@ -130,6 +131,23 @@ class FinanceService:
             
             for txn in expense_transactions:
                 print(f"[DASHBOARD] Expense: ₹{txn.amount} - {txn.description}")
+
+            # Calculate revenue breakdown by payment method from SalesTransaction
+            payment_method_breakdown = {}
+            
+            for txn in sales_transactions:
+                method = txn.payment_method or 'Unknown'
+                amount = float(txn.amount or 0)
+                if method in payment_method_breakdown:
+                    payment_method_breakdown[method] += amount
+                else:
+                    payment_method_breakdown[method] = amount
+            
+            print(f"[DASHBOARD] Payment Method Breakdown: {payment_method_breakdown}")
+            
+            # Verify total revenue matches breakdown sum
+            breakdown_total = sum(payment_method_breakdown.values())
+            print(f"[DASHBOARD] Breakdown Total: ₹{breakdown_total} (should match Total Revenue: ₹{total_revenue})")
 
             # Net profit = Revenue - Expenses
             net_profit = total_revenue - total_expenses
@@ -148,7 +166,8 @@ class FinanceService:
                 'totalExpenses': float(total_expenses),
                 'netProfit': float(net_profit),
                 'recentTransactions': [txn.to_dict() for txn in recent_transactions],
-                'pendingApprovals': pending_count
+                'pendingApprovals': pending_count,
+                'paymentMethodBreakdown': payment_method_breakdown
             }
 
             return result
@@ -161,6 +180,7 @@ class FinanceService:
                 'netProfit': 0.0,
                 'recentTransactions': [],
                 'pendingApprovals': 0,
+                'paymentMethodBreakdown': {},
                 'error': str(e)
             }
     
@@ -252,6 +272,24 @@ class FinanceService:
             raise ValueError('No pending finance approval for this order')
 
         if approved:
+            # Get the most recent payment transaction that's being approved
+            recent_payment = SalesTransaction.query.filter_by(
+                sales_order_id=order_id,
+                transaction_type='payment'
+            ).order_by(SalesTransaction.created_at.desc()).first()
+            
+            # Create FinanceTransaction for the approved payment (actual revenue received)
+            if recent_payment:
+                revenue_transaction = FinanceTransaction(
+                    transaction_type='revenue',
+                    amount=recent_payment.amount,
+                    description=f'Payment approved for Order #{order.order_number} - {recent_payment.payment_method}',
+                    reference_id=order_id,
+                    reference_type='sales_payment'
+                )
+                db.session.add(revenue_transaction)
+                print(f"[FINANCE] Created FinanceTransaction for approved payment: ₹{recent_payment.amount}")
+            
             # Query database directly for accurate payment total
             total_paid = db.session.query(db.func.coalesce(db.func.sum(SalesTransaction.amount), 0)).filter_by(
                 sales_order_id=order_id,
