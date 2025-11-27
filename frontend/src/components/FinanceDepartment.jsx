@@ -22,7 +22,11 @@ import {
   Users,
   Calendar,
   Download,
-  CheckCircle
+  CheckCircle,
+  Wallet,
+  CreditCard,
+  Smartphone,
+  Banknote
 } from 'lucide-react';
 import { API_BASE } from '@/lib/api';
 import OrderStatusBar from '@/components/ui/OrderStatusBar';
@@ -794,6 +798,76 @@ const FinanceDepartment = () => {
               </Card>
             </div>
 
+            {/* Revenue Breakdown by Payment Method */}
+            <Card className="bg-white border-2 border-gray-200 shadow-lg mb-8">
+              <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+                <CardTitle className="text-white text-xl font-bold flex items-center">
+                  <Wallet className="w-6 h-6 mr-3" />
+                  Revenue Breakdown by Payment Method
+                </CardTitle>
+                <p className="text-blue-100 text-sm font-medium mt-1">Total revenue collected through different payment methods</p>
+              </CardHeader>
+              <CardContent className="p-6">
+                {dashboardData.paymentMethodBreakdown && Object.keys(dashboardData.paymentMethodBreakdown).length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {Object.entries(dashboardData.paymentMethodBreakdown).map(([method, amount]) => {
+                      // Determine icon and color based on payment method
+                      let icon, colorClass, bgClass;
+                      const methodLower = method.toLowerCase();
+                      
+                      if (methodLower === 'cash') {
+                        icon = <Banknote className="w-6 h-6" />;
+                        colorClass = 'text-green-700';
+                        bgClass = 'bg-green-50 border-green-200';
+                      } else if (methodLower === 'upi' || methodLower === 'online') {
+                        icon = <Smartphone className="w-6 h-6" />;
+                        colorClass = 'text-purple-700';
+                        bgClass = 'bg-purple-50 border-purple-200';
+                      } else if (methodLower === 'card' || methodLower === 'credit_card' || methodLower === 'debit_card') {
+                        icon = <CreditCard className="w-6 h-6" />;
+                        colorClass = 'text-blue-700';
+                        bgClass = 'bg-blue-50 border-blue-200';
+                      } else if (methodLower === 'bank_transfer' || methodLower === 'neft' || methodLower === 'rtgs') {
+                        icon = <Building className="w-6 h-6" />;
+                        colorClass = 'text-indigo-700';
+                        bgClass = 'bg-indigo-50 border-indigo-200';
+                      } else if (methodLower === 'cheque') {
+                        icon = <FileText className="w-6 h-6" />;
+                        colorClass = 'text-orange-700';
+                        bgClass = 'bg-orange-50 border-orange-200';
+                      } else {
+                        icon = <Wallet className="w-6 h-6" />;
+                        colorClass = 'text-gray-700';
+                        bgClass = 'bg-gray-50 border-gray-200';
+                      }
+                      
+                      return (
+                        <div key={method} className={`p-4 border-2 rounded-lg ${bgClass}`}>
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className={colorClass}>{icon}</div>
+                            <span className="font-semibold text-gray-900 capitalize">
+                              {method.replace(/_/g, ' ')}
+                            </span>
+                          </div>
+                          <p className={`text-2xl font-bold ${colorClass}`}>
+                            ₹{amount.toLocaleString()}
+                          </p>
+                          <p className="text-xs text-gray-600 mt-1">
+                            {((amount / dashboardData.totalRevenue) * 100).toFixed(1)}% of total
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Wallet className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p className="text-lg font-medium">No payment data available</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Financial Summary */}
             <Card className="bg-white border-2 border-gray-200 shadow-lg">
               <CardHeader className="bg-gradient-to-r from-gray-700 to-gray-800 text-white">
@@ -1008,33 +1082,103 @@ const FinanceDepartment = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {approvedSalesOrders.map(order => (
-                    <div key={order.id} className="p-4 border border-gray-200 rounded-lg bg-gray-50">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-gray-900">Order #{order.orderNumber}</h4>
-                          <p className="text-sm text-gray-600">Customer: {order.customerName}</p>
-                          <p className="text-sm text-gray-600">Sales Person: {order.salesPerson}</p>
-                          <p className="text-sm font-semibold text-green-700">Amount: ₹{order.finalAmount?.toLocaleString()}</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-green-600 text-green-700 hover:bg-green-50"
-                            onClick={() => handleDownloadInvoice(order.id, order.orderNumber)}
-                            title="Download Invoice"
-                          >
-                            <Download className="h-4 w-4 mr-2" />
-                            Invoice
-                          </Button>
-                          <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded">
-                            {order.paymentStatus}
-                          </span>
+                  {approvedSalesOrders.map(order => {
+                    // Calculate payment amounts
+                    const totalAmount = order.finalAmount || 0;
+                    const receivedAmount = order.amountPaid || 0; // Backend returns 'amountPaid'
+                    const pendingAmount = Math.max(totalAmount - receivedAmount, 0); // Ensure non-negative
+                    
+                    // Determine payment status
+                    const isFullyPaid = pendingAmount <= 0;
+                    const isPartiallyPaid = receivedAmount > 0 && pendingAmount > 0;
+                    const isPending = receivedAmount === 0;
+                    
+                    return (
+                      <div key={order.id} className="p-4 border-2 border-gray-200 rounded-lg bg-white shadow-sm">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h4 className="font-bold text-gray-900 text-lg">Order #{order.orderNumber}</h4>
+                              {/* Payment Status Badge */}
+                              {isFullyPaid ? (
+                                <Badge className="bg-green-100 text-green-800 border border-green-300 flex items-center gap-1">
+                                  <CheckCircle className="w-3 h-3" />
+                                  Fully Paid
+                                </Badge>
+                              ) : isPartiallyPaid ? (
+                                <Badge className="bg-yellow-100 text-yellow-800 border border-yellow-300 flex items-center gap-1">
+                                  <AlertCircle className="w-3 h-3" />
+                                  Partial Payment
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-red-100 text-red-800 border border-red-300 flex items-center gap-1">
+                                  <XCircle className="w-3 h-3" />
+                                  Payment Pending
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            <p className="text-sm text-gray-700 font-medium">Customer: {order.customerName}</p>
+                            <p className="text-sm text-gray-600">Sales Person: {order.salesPerson}</p>
+                            
+                            {/* Payment Details */}
+                            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                              <div className="grid grid-cols-3 gap-4 text-sm">
+                                <div>
+                                  <p className="text-gray-600 font-medium">Total Amount</p>
+                                  <p className="text-lg font-bold text-gray-900">₹{totalAmount.toLocaleString()}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-600 font-medium">Received Amount</p>
+                                  <p className="text-lg font-bold text-green-700">₹{receivedAmount.toLocaleString()}</p>
+                                </div>
+                                <div>
+                                  <p className="text-gray-600 font-medium">Pending Amount</p>
+                                  <p className={`text-lg font-bold ${pendingAmount > 0 ? 'text-red-700' : 'text-green-700'}`}>
+                                    ₹{pendingAmount.toLocaleString()}
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              {/* Payment Progress Bar */}
+                              {totalAmount > 0 && (
+                                <div className="mt-3">
+                                  <div className="flex justify-between text-xs text-gray-600 mb-1">
+                                    <span>Payment Progress</span>
+                                    <span>{((receivedAmount / totalAmount) * 100).toFixed(1)}%</span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <div 
+                                      className={`h-2 rounded-full transition-all ${
+                                        isFullyPaid ? 'bg-green-600' : isPartiallyPaid ? 'bg-yellow-500' : 'bg-red-500'
+                                      }`}
+                                      style={{ width: `${Math.min((receivedAmount / totalAmount) * 100, 100)}%` }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-col items-end gap-2 ml-4">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-green-600 text-green-700 hover:bg-green-50"
+                              onClick={() => handleDownloadInvoice(order.id, order.orderNumber)}
+                              title="Download Invoice"
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Invoice
+                            </Button>
+                            <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
+                              {order.paymentStatus}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
