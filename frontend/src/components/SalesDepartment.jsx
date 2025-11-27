@@ -1631,6 +1631,10 @@ const handleDeliveryTypeChange = async () => {
                                                         salesPerson: order.salesPerson || '',
                                                         notes: order.notes || '',
                                                         transportCost: order.transportCost || 0,
+                                                        origin: order.origin || '',
+                                                        destination: order.destination || '',
+                                                        distance: order.distance || '',
+                                                        vehicleType: order.vehicleType || '',
                                                         totalAmount: (order.unitPrice || 0) * (order.quantity || 1) + (order.transportCost || 0),
                                                         deliveryType: order.deliveryType || 'self delivery'
                                                     });
