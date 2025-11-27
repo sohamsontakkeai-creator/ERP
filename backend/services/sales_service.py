@@ -240,15 +240,9 @@ class SalesService:
             showroom_product.showroom_status = 'sold'
             showroom_product.sold_date = get_ist_now()
         
-        # Create finance transaction for revenue
-        revenue_transaction = FinanceTransaction(
-            transaction_type='revenue',
-            amount=final_amount,
-            description=f'Sales order {order_number} - {showroom_product.name}',
-            reference_id=sales_order.id,
-            reference_type='sales_order'
-        )
-        db.session.add(revenue_transaction)
+        # NOTE: FinanceTransaction for revenue should be created when payment is RECEIVED and APPROVED
+        # Not when order is created, as payment might be partial or pending
+        # This will be handled in the finance approval process
         
         db.session.commit()
         
