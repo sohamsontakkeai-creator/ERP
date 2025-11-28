@@ -21,6 +21,8 @@ class Config:
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
         'pool_recycle': 300,
+        'isolation_level': 'READ COMMITTED',  # Ensure we always read committed data
+        'echo': False,  # Set to True for SQL debugging
     }
     
     # Flask Configuration
@@ -48,7 +50,6 @@ class Config:
     
     # Backend URL for file uploads
     BACKEND_BASE_URL = os.getenv('BACKEND_BASE_URL', 'http://localhost:5000')
-
 
 class DevelopmentConfig(Config):
     """Development configuration"""
