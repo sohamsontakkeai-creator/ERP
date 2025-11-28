@@ -132,9 +132,22 @@ class SalesService:
     @staticmethod
     def get_sales_order_by_id(order_id):
         """Get a specific sales order by ID"""
-        order = SalesOrder.query.get(order_id)
-        if not order:
+        from sqlalchemy import text
+        
+        # Force MySQL to fetch fresh data by closing and reopening the session
+        db.session.close()
+        
+        # Execute a raw SQL query to bypass all caching
+        result = db.session.execute(
+            text("SELECT * FROM sales_order WHERE id = :order_id"),
+            {"order_id": order_id}
+        ).fetchone()
+        
+        if not result:
             raise ValueError('Sales order not found')
+        
+        # Now get the ORM object with fresh data
+        order = db.session.query(SalesOrder).filter_by(id=order_id).first()
         return order.to_dict()
     
     @staticmethod
