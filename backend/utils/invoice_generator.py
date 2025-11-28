@@ -38,13 +38,23 @@ def generate_proforma_invoice(sales_order):
     
     sales_person = sales_order.get('salesPerson', 'YOGESH SIR')  # Get sales person name
     quantity = float(sales_order.get('quantity', 1))
-    unit_price = float(sales_order.get('unitPrice', 0))
+    unit_price_with_gst = float(sales_order.get('unitPrice', 0))  # This is the final amount with GST
     
-    # Calculate amounts
-    subtotal = unit_price * quantity
+    # Reverse calculate amounts (unitPrice is GST inclusive)
+    # Final amount = unit_price_with_gst * quantity
+    final_amount = unit_price_with_gst * quantity
+    
+    # Calculate base amount (without GST)
+    # If GST is 18% (9% CGST + 9% SGST), then: final_amount = base_amount * 1.18
+    # So: base_amount = final_amount / 1.18
+    subtotal = final_amount / 1.18
+    
+    # Calculate GST amounts
     cgst_amount = subtotal * 0.09  # 9%
     sgst_amount = subtotal * 0.09  # 9%
-    final_amount = subtotal + cgst_amount + sgst_amount
+    
+    # Calculate unit rate (base price per unit without GST)
+    unit_rate = subtotal / quantity
     
     # Format date
     try:
@@ -180,7 +190,7 @@ def generate_proforma_invoice(sales_order):
           </td>
           <td class="center">84749000</td>
           <td class="center">{quantity:.3f} NOS</td>
-          <td class="amount-right">{unit_price:,.2f}</td>
+          <td class="amount-right">{unit_rate:,.2f}</td>
           <td class="amount-right">{subtotal:,.2f}</td>
         </tr>
 
@@ -284,13 +294,23 @@ def generate_final_invoice(sales_order):
     
     sales_person = sales_order.get('salesPerson', 'YOGESH SIR')  # Get sales person name
     quantity = float(sales_order.get('quantity', 1))
-    unit_price = float(sales_order.get('unitPrice', 0))
+    unit_price_with_gst = float(sales_order.get('unitPrice', 0))  # This is the final amount with GST
     
-    # Calculate amounts
-    subtotal = unit_price * quantity
+    # Reverse calculate amounts (unitPrice is GST inclusive)
+    # Final amount = unit_price_with_gst * quantity
+    final_amount = unit_price_with_gst * quantity
+    
+    # Calculate base amount (without GST)
+    # If GST is 18% (9% CGST + 9% SGST), then: final_amount = base_amount * 1.18
+    # So: base_amount = final_amount / 1.18
+    subtotal = final_amount / 1.18
+    
+    # Calculate GST amounts
     cgst_amount = subtotal * 0.09  # 9%
     sgst_amount = subtotal * 0.09  # 9%
-    final_amount = subtotal + cgst_amount + sgst_amount
+    
+    # Calculate unit rate (base price per unit without GST)
+    unit_rate = subtotal / quantity
     
     # Format date
     try:
@@ -426,7 +446,7 @@ def generate_final_invoice(sales_order):
           </td>
           <td class="center">84749000</td>
           <td class="center">{quantity:.3f} NOS</td>
-          <td class="amount-right">{unit_price:,.2f}</td>
+          <td class="amount-right">{unit_rate:,.2f}</td>
           <td class="amount-right">{subtotal:,.2f}</td>
         </tr>
 
