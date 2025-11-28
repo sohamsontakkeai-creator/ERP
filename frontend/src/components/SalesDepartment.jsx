@@ -361,20 +361,54 @@ const fetchPaymentReminders = async () => {
     }
 };
 
-const handleDownloadInvoice = async (orderId, orderNumber) => {
+const handleDownloadInvoice = async (orderId, orderNumber, orderData = null) => {
     try {
         toast({ title: 'Opening Invoice...', description: 'Generating invoice' });
         
-        // Open invoice in new window - backend returns HTML
-        const invoiceUrl = `${API_BASE}/sales/orders/${orderId}/invoice`;
-        window.open(invoiceUrl, '_blank');
+        // Always use POST with order data to ensure latest values
+        const dataToSend = orderData || {};
         
-        toast({ title: 'Success', description: 'Invoice opened in new window' });
+        const response = await fetch(`${API_BASE}/sales/orders/${orderId}/invoice`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                unitPrice: dataToSend.unitPrice || dataToSend.finalAmount,
+                quantity: dataToSend.quantity,
+                transportCost: dataToSend.transportCost,
+                discountAmount: dataToSend.discountAmount,
+                finalAmount: dataToSend.finalAmount,
+                totalAmount: dataToSend.totalAmount,
+                deliveryType: dataToSend.Delivery_type || dataToSend.deliveryType
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to generate invoice');
+        }
+        
+        const htmlContent = await response.text();
+        
+        // Open in new window
+        const newWindow = window.open('', '_blank');
+        if (newWindow) {
+            newWindow.document.write(htmlContent);
+            newWindow.document.close();
+            toast({ title: 'Success', description: 'Invoice opened in new window' });
+        } else {
+            toast({ 
+                title: 'Error', 
+                description: 'Please allow popups for this site', 
+                variant: 'destructive' 
+            });
+        }
     } catch (error) {
         console.error('Error opening invoice:', error);
         toast({ 
             title: 'Error', 
-            description: 'Failed to open invoice', 
+            description: error.message || 'Failed to open invoice', 
             variant: 'destructive' 
         });
     }
@@ -1914,7 +1948,7 @@ const handleDeliveryTypeChange = async () => {
                                         size="sm"
                                         variant="outline"
                                         className="border-green-600 text-green-700 hover:bg-green-50"
-                                        onClick={() => handleDownloadInvoice(order.id, order.orderNumber)}
+                                        onClick={() => handleDownloadInvoice(order.id, order.orderNumber, order)}
                                         title="Download Proforma Invoice"
                                     >
                                         <Download className="h-4 w-4" />
