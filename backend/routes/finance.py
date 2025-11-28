@@ -244,20 +244,47 @@ def get_approved_sales_bills():
 
 
 
-@finance_bp.route('/finance/orders/<int:order_id>/invoice', methods=['GET'])
+@finance_bp.route('/finance/orders/<int:order_id>/invoice', methods=['GET', 'POST'])
 def download_finance_invoice(order_id):
     """Generate and display final invoice HTML for a sales order (Finance Department)"""
     try:
         from utils.invoice_generator import generate_final_invoice
-        from models import SalesOrder
+        from models import SalesOrder, db
         
-        # Get the sales order
-        order = SalesOrder.query.get(order_id)
+        # Get the sales order from database
+        order = db.session.query(SalesOrder).filter_by(id=order_id).first()
         if not order:
             return jsonify({'error': 'Order not found'}), 404
         
-        # Convert to dict for invoice generator
+        # Convert to dict
         order_dict = order.to_dict()
+        
+        # Log original values
+        print(f"=== INVOICE GENERATION FOR ORDER {order_id} ===")
+        print(f"DB Values - unitPrice: {order_dict.get('unitPrice')}, finalAmount: {order_dict.get('finalAmount')}, transportCost: {order_dict.get('transportCost')}")
+        
+        # If POST request with updated data, override the values from frontend
+        if request.method == 'POST':
+            frontend_data = request.get_json() or {}
+            print(f"Frontend Data Received: {frontend_data}")
+            
+            # Override with frontend values if provided and not None/empty
+            if frontend_data.get('unitPrice'):
+                order_dict['unitPrice'] = float(frontend_data['unitPrice'])
+            if frontend_data.get('quantity'):
+                order_dict['quantity'] = int(frontend_data['quantity'])
+            if frontend_data.get('transportCost') is not None:
+                order_dict['transportCost'] = float(frontend_data['transportCost'])
+            if frontend_data.get('discountAmount') is not None:
+                order_dict['discountAmount'] = float(frontend_data['discountAmount'])
+            if frontend_data.get('finalAmount'):
+                order_dict['unitPrice'] = float(frontend_data['finalAmount'])  # Use finalAmount as unitPrice for GST calculation
+            if frontend_data.get('totalAmount'):
+                order_dict['totalAmount'] = float(frontend_data['totalAmount'])
+            if frontend_data.get('deliveryType'):
+                order_dict['Delivery_type'] = frontend_data['deliveryType']
+            
+            print(f"After Override - unitPrice: {order_dict.get('unitPrice')}, finalAmount: {order_dict.get('finalAmount')}, transportCost: {order_dict.get('transportCost')}")
         
         # Generate HTML
         html_content = generate_final_invoice(order_dict)
